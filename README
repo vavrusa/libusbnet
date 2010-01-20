@@ -1,0 +1,9 @@
+libusb over TCP/IP
+==================
+
+libusbnet is a wrapper for libusb library
+to enable communication with USB devices over
+TCP/IP.
+
+---
+Marek Vavrusa <marek@vavrusa.com>
