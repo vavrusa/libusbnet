@@ -1,0 +1,12 @@
+# Build
+build/
+
+# Backups
+*.backup
+*~
+
+# CMake
+CMakeFiles
+CMakeCache.xt
+cmake_install.cmake
+cmake_uninstall.cmake
