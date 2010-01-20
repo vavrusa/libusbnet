@@ -51,7 +51,7 @@ static const char* filename(const char* path) {
       char* __res = dlerror(); \
       if (__res != NULL) { \
          fprintf(stderr, "[!!] %s:%d: READ_SYM(%s): %s\n", filename(__FILE__), __LINE__, (ident), __res); \
-         exit(1);
+         exit(1); \
       } \
    } \
 }
