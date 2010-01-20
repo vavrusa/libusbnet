@@ -1,0 +1,29 @@
+Progress
+(A - assigned, C - complete, N - not needed)
+============================================
+A usb_init()
+A usb_find_busses()
+A usb_find_devices()
+A usb_get_busses()
+
+Milestone 0 (device discovery):
+===============================
+usb_init()
+usb_find_busses()
+usb_find_devices()
+usb_get_busses()
+
+Milestone 1 (libftdi compatibility):
+====================================
+usb_close()
+usb_open()
+usb_get_string_simple()
+usb_strerror()
+usb_set_configuration()
+usb_claim_interface()
+usb_control_msg()
+usb_release_interface()
+usb_bulk_write()
+usb_bulk_read()
+usb_get_driver_np()
+usb_detach_kernel_driver_np()
