@@ -19,6 +19,9 @@ set_target_properties(usbnet_static PROPERTIES OUTPUT_NAME "usbnet")
 set_target_properties(usbnet PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 set_target_properties(usbnet_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
+# Client/Server
+add_subdirectory(clientserver)
+
 # Dependencies
 #target_link_libraries(usbnet ${LIBUSB_LIBRARIES})
 
