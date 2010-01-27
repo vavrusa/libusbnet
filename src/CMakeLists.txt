@@ -7,12 +7,13 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
 set(sources   usbnet.c
               )
 set(headers   usbnet.h
+              common.h
               )
 
 add_library(usbnet SHARED ${sources})
 
 # Static library
-add_library(usbnet_static STATIC ${sources})
+add_library(usbnet_static STATIC ${sources} ${headers})
 set_target_properties(usbnet_static PROPERTIES OUTPUT_NAME "usbnet")
 
 # Prevent clobbering each other during the build
