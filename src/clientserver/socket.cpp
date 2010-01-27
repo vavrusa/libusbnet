@@ -26,7 +26,7 @@
 using namespace std;
 
 Socket::Socket(int fd)
-   : mSock(fd), mPort(DefaultPort)
+   : mSock(fd), mPort(0)
 {
 }
 
@@ -105,6 +105,15 @@ int Socket::listen(int port, int limit)
    return Ok;
 }
 
+int Socket::accept()
+{
+   sockaddr_in client_addr;
+   socklen_t client_addr_size;
+   client_addr_size = sizeof(struct sockaddr_in);
+   int client = ::accept(sock(), (sockaddr*) &client_addr, &client_addr_size);
+   return client;
+}
+
 int Socket::bind(int port)
 {
    // Create address
@@ -115,6 +124,7 @@ int Socket::bind(int port)
    if(::bind(mSock, (sockaddr*) &mAddr, sizeof(mAddr)) < 0)
       return -1;
 
+   mHost = "localhost";
    mPort = port;
    return 0;
 }

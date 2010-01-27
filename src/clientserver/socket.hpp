@@ -28,66 +28,71 @@
 class Socket
 {
    public:
-      Socket(int fd = -1);
-      virtual ~Socket();
 
-      // Connect to remote host:port
-      int connect(const std::string& host = "localhost", int port = 0);
+   Socket(int fd = -1);
+   virtual ~Socket();
 
-      // Listen on given port
-      int listen(int port, int limit = 5);
+   // Connect to remote host:port
+   int connect(const std::string& host, int port);
 
-      // Close connection
-      int close();
+   // Listen on given port
+   int listen(int port, int limit = 5);
 
-      // Send raw data
-      int send(const char* buf, size_t size);
+   // Accept new connection
+   int accept();
 
-      // Receive raw data
-      int recv(char* dst, int size, int flags = 0) {
-         return ::recv(mSock, dst, size, flags);
-      }
+   // Close connection
+   int close();
 
-      // Returns whether is socket associated
-      bool isOpen() { return mSock != -1; }
+   // Send raw data
+   int send(const char* buf, size_t size);
 
-      // Returns socket id
-      int sock() { return mSock; }
+   // Receive raw data
+   int recv(char* dst, int size, int flags = 0) {
+      return ::recv(mSock, dst, size, flags);
+   }
 
-      // Returns port
-      int port() { return mPort; }
+   // Returns whether is socket associated
+   bool isOpen() { return mSock != -1; }
 
-      // Returns host as std::string reference
-      const std::string& host() { return mHost; }
+   // Returns socket id
+   int sock() { return mSock; }
 
-      // Return address as struct
-      sockaddr_in& addr() { return mAddr; }
+   // Returns port
+   int port() { return mPort; }
 
-      // Error enumeration
-      enum {
-         IOError        = -128,
-         BadAddr,
-         ConnectError,
-         CloseError,
-         SendError,
-         RecvError,
-         NotOpen,
-         Ok             = 1,
-         DefaultPort    = 0
-      };
+   // Returns host as std::string reference
+   const std::string& host() { return mHost; }
+
+   // Return address as struct
+   sockaddr_in& addr() { return mAddr; }
+
+   // Error enumeration
+   enum {
+      IOError        = -128,
+      BadAddr,
+      ConnectError,
+      CloseError,
+      SendError,
+      RecvError,
+      NotOpen,
+      Ok             = 0
+   };
 
    protected:
-      // Create TCP sockets
-      int create();
 
-      // Bind to port
-      int bind(int port);
+   // Create TCP sockets
+   int create();
+
+   // Bind to port
+   int bind(int port);
 
    private:
-      int mSock;
-      int mPort;
-      sockaddr_in mAddr;
-      std::string mHost;
+
+   int mSock;
+   int mPort;
+   sockaddr_in mAddr;
+   std::string mHost;
 };
 
 #endif // __socket_hpp__
