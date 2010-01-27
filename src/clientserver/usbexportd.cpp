@@ -17,9 +17,25 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
 ***************************************************************************/
 
-#include "socket.hpp"
+#include "serversocket.hpp"
+#define EXIT_FAILURE 1
+#define EXIT_SUCCESS 0
 
 int main(int argc, char* argv[])
 {
-   return 0;
+   // Create server socket
+   ServerSocket server;
+   if(server.listen(22222) != Socket::Ok) {
+      return EXIT_FAILURE;
+   }
+
+   // Process client requests
+   server.run();
+
+   // Close socket
+   if(server.close() != Socket::Ok) {
+      return EXIT_FAILURE;
+   }
+
+   return EXIT_SUCCESS;
 }

@@ -6,8 +6,10 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
 # Targets
 set(sources   usbexportd.cpp
               socket.cpp
+              serversocket.cpp
               )
 set(headers   socket.hpp
+              serversocket.hpp
               )
 
 add_executable(usbexportd ${sources})
