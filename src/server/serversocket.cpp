@@ -27,17 +27,12 @@ using std::cout;
 class ServerSocket::Private
 {
    public:
-   std::vector<pollfd> clients;
+   std::vector<struct pollfd> clients;
 };
 
 ServerSocket::ServerSocket(int fd)
    : Socket(fd), d(new Private)
 {
-   // Append self to clients vector
-   pollfd self;
-   self.events = POLLIN; // Only reading
-   self.fd = sock();     // Server fd
-   d->clients.push_back(self);
 }
 
 ServerSocket::~ServerSocket()
@@ -49,39 +44,79 @@ void ServerSocket::run()
 {
    cout << "Running server at " << host() << ":" << port() << " ...\n";
 
+   // Append self to clients vector
+   std::vector<pollfd>::iterator it;
+   std::vector<pollfd> incoming;
+   struct pollfd self;
+   self.events = POLLIN; // Only reading
+   self.fd = sock();     // Server fd
+   incoming.push_back(self);
+
    // Process event loop
    while(isOpen()) {
 
+      // Evaluate incoming sockets
+      if(!incoming.empty()) {
+         for(it = incoming.begin(); it != incoming.end(); ++it) {
+            cout << "Connected (fd " << it->fd << ").\n";
+            d->clients.push_back(*it);
+         }
+         incoming.clear();
+      }
+
       // Poll clients
       // Contiguity for std::vector is mandated by the standard [See 23.2.4./1]
-      while(poll(&d->clients[0], d->clients.size(), 500) > 0)
+      if(poll(&d->clients[0], d->clients.size(), 2000) > 0)
       {
          // Check server for read
-         std::vector<pollfd>::iterator it;
          for(it = d->clients.begin(); it != d->clients.end(); ++it) {
 
             // Incoming
             if(it->revents & POLLIN) {
 
                // Server socket
-               if(it == d->clients.begin()) {
-                  pollfd client;
-                  client.events = POLLIN|POLLOUT;
+               if(it->fd == d->clients[0].fd) {
+
+                  struct pollfd client;
+                  client.events = POLLIN;
                   client.fd = accept();
                   client.revents = 0;
 
                   // Accept client
                   if(client.fd > 0) {
-                     d->clients.push_back(client);
-                     cout << "Incoming connection to " << client.fd << ".\n";
+                     incoming.push_back(client);
                   }
                }
                else {
-                  cout << "Incoming data from " << it->fd << ".\n";
+                  cout << "Incoming data (fd " << it->fd << ").\n";
+                  if(!handle(it->fd))
+                     it->revents |= POLLHUP;
                }
+            }
+
+            // Disconnect
+            if(it->revents & POLLHUP || it->revents & POLLNVAL) {
+               cout << "Disconnected (fd" << it->fd << ").\n";
+               d->clients.erase(it);
+               it = d->clients.begin();
+               continue;
             }
          }
       }
    }
 
+   // Stop server
+   cout << "Stopping server.\n";
+}
+
+bool ServerSocket::handle(int fd)
+{
+   Socket c(fd);
+   char buf[2048];
+   int rcvd = c.recv(buf, 2048 - 1);
+   if(rcvd <= 0)
+      return false;
+
+   buf[rcvd] = '\0';
+   cout << "Received (" << rcvd << " b): " << buf << "\n";
 }

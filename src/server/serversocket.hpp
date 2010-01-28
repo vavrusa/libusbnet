@@ -34,6 +34,13 @@ class ServerSocket : public Socket
      */
    void run();
 
+   protected:
+
+   /** Handle incoming event.
+     * \param fd
+     */
+   bool handle(int fd);
+
    private:
 
    /* Opaque pointer */
