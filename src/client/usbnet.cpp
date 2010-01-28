@@ -19,19 +19,56 @@
 
 #include "clientsocket.hpp"
 #include "common.h"
+//#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <cstdlib>
+#include <cstdio>
 
 int main(int argc, char* argv[])
 {
    // Create remote connection
    // TODO: args
    ClientSocket remote;
-   if(remote.connect("localhost", 22222) != Socket::Ok) {
+   const char* host = "localhost";
+   int port = 22222;
+   printf("Connecting to %s:%d ...\n", host, port);
+   if(remote.connect(host, port) != Socket::Ok) {
+      printf("Connection failed.\n");
       return EXIT_FAILURE;
    }
 
-   // TODO: map fd to SHM
+   // Create SHM segment
+   int shm_id = 0;
+   printf("IPC: creating segment at key 0x%x (%d bytes)\n", SHM_KEY, SHM_SIZE);
+   if((shm_id = shmget(SHM_KEY, SHM_SIZE, IPC_CREAT|0666)) == -1) {
+      perror("shmget");
+      return EXIT_FAILURE;
+   }
+
+   // Attach segment and save fd
+   printf("IPC: attaching segment %d\n", shm_id);
+   void* shm_addr = NULL;
+   if ((shm_addr = shmat(shm_id, NULL, 0)) == (void *) -1) {
+      perror("shmat");
+      return EXIT_FAILURE;
+   }
+
+   // Save fd
+   int* shm = (int*) shm_addr;
+   *shm = remote.sock();
+   printf("IPC: socket %d is stored in %d (mapped to %p)\n", remote.sock(), shm_id, shm);
+
+   // Detach segment
+   printf("IPC: detaching segment %d\n", shm_id);
+   if(shmdt(shm_addr) != 0) {
+      perror("shmdt");
+      return EXIT_FAILURE;
+   }
+
    // TODO: run executable with preloaded library
+
+   // Delete segment
+   shmctl(shm_id, IPC_RMID, NULL);
 
    // Close socket
    if(remote.close() != Socket::Ok) {

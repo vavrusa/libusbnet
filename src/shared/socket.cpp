@@ -51,7 +51,7 @@ int Socket::connect(const std::string& host, int port)
 {
    // Ignore multiple connect
    if(isOpen())
-      return false;
+      return ConnectError;
 
    // Create socket
    hostent* hent = 0;

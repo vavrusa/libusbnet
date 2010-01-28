@@ -21,6 +21,15 @@
 #include <dlfcn.h>
 #include <string.h>
 
+/** Symbolic constants.
+  */
+#define SHM_KEY  (0x2a2a2a2a)
+#define SHM_SIZE (512) // At least size of int, SHMMIN may be enforced (!)
+
+
+/** Debugging and symbol loading macros.
+  */
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -36,7 +45,8 @@ static const char* filename(const char* path) {
    return ++p;
 }
 
-/** Debug macro for marking unimplemented calls. */
+/** Debug macro for marking unimplemented calls.
+  */
 #ifdef DEBUG
 #define NOT_IMPLEMENTED \
    fprintf(stderr, "[!!] %s:%d: function '%s' not implemented\n", filename(__FILE__), __LINE__, __func__);
