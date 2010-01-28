@@ -95,8 +95,8 @@ void ServerSocket::run()
             }
 
             // Disconnect
-            if(it->revents & POLLHUP || it->revents & POLLNVAL) {
-               cout << "Disconnected (fd" << it->fd << ").\n";
+            if(it->revents & POLLHUP) {
+               cout << "Disconnected (fd " << it->fd << ").\n";
                d->clients.erase(it);
                it = d->clients.begin();
                continue;
@@ -119,4 +119,5 @@ bool ServerSocket::handle(int fd)
 
    buf[rcvd] = '\0';
    cout << "Received (" << rcvd << " b): " << buf << "\n";
+   return true;
 }

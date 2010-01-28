@@ -19,7 +19,6 @@
 
 #include "clientsocket.hpp"
 #include "common.h"
-//#include <sys/ipc.h>
 #include <sys/shm.h>
 #include <cstdlib>
 #include <cstdio>
@@ -65,9 +64,21 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
    }
 
-   // TODO: run executable with preloaded library
+   // Run executable with preloaded library
+   if(argc > 1) {
+      std::string cmd("LD_PRELOAD=\"");
+      cmd.append(argv[1]);
+      cmd.append("\" \"");
+      cmd.append(argv[2]);
+      cmd.append("\"");
+      printf("Executing: %s\n", cmd.c_str());
+
+      int ret = system(cmd.c_str());
+      printf("IPC: executable returned %d\n", ret);
+   }
 
    // Delete segment
+   printf("IPC: removing segment %d\n", shm_id);
    shmctl(shm_id, IPC_RMID, NULL);
 
    // Close socket
