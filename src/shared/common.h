@@ -18,8 +18,13 @@
 ***************************************************************************/
 #ifndef __common_h__
 #define __common_h__
-#define _GNU_SOURCE
 #include <dlfcn.h>
+#include <string.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 /* Helper function to return only base name from path. */
 static const char* filename(const char* path) {
@@ -52,5 +57,9 @@ static const char* filename(const char* path) {
       } \
    } \
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __common_h__
