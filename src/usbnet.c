@@ -27,7 +27,7 @@
 void usb_init(void)
 {
    static void (*func)(void) = NULL;
-   LOAD_NEXT_SYM(func, "usb_init");
+   READ_SYM(func, "usb_init");
    NOT_IMPLEMENTED;
 }
 

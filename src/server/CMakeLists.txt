@@ -1,18 +1,19 @@
 # Includes
 include_directories( ${CMAKE_CURRENT_BINARY_DIR}
                      ${CMAKE_CURRENT_SOURCE_DIR}
+                     ${CMAKE_CURRENT_SOURCE_DIR}/../shared
                      )
 
 # Targets
 set(sources   usbexportd.cpp
-              socket.cpp
               serversocket.cpp
+              ${SHARED_DIR}/socket.cpp
               )
-set(headers   socket.hpp
-              serversocket.hpp
+set(headers   serversocket.hpp
+              ${SHARED_DIR}/socket.hpp
               )
 
-add_executable(usbexportd ${sources})
+add_executable(usbexportd ${sources} ${headers})
 
 # Prevent clobbering each other during the build
 set_target_properties(usbexportd PROPERTIES CLEAN_DIRECT_OUTPUT 1)
