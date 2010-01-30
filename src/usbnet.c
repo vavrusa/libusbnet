@@ -24,6 +24,7 @@
 #include <sys/shm.h>
 #include "usbnet.h"
 #include "common.h"
+#include "protocol.h"
 
 // Remote socket filedescriptor
 static int __remote_fd = -1;
@@ -38,24 +39,28 @@ static int get_remote() {
    // Get fd from SHM
    int shm_id = 0;
    printf("IPC: accessing segment at key 0x%x (%d bytes)\n", SHM_KEY, SHM_SIZE);
-   if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) == -1) {
-      return __remote_fd;
+   if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) != -1) {
+
+      // Attach segment and read fd
+      printf("IPC: attaching segment %d\n", shm_id);
+      void* shm_addr = NULL;
+      if ((shm_addr = shmat(shm_id, NULL, 0)) != (void *) -1) {
+
+         // Read fd
+         __remote_fd = *((int*) shm_addr);
+
+         // Detach
+         shmdt(shm_addr);
+      }
    }
 
-   // Attach segment and read fd
-   printf("IPC: attaching segment %d\n", shm_id);
-   void* shm_addr = NULL;
-   if ((shm_addr = shmat(shm_id, NULL, 0)) == (void *) -1) {
-      return __remote_fd;
-   }
-
-   // Read fd
-   __remote_fd = *((int*) shm_addr);
-
-   // Detach
-   shmdt(shm_addr);
-
+   // Check resulting fd
    printf("IPC: remote fd is %d\n", __remote_fd);
+   if(__remote_fd == -1) {
+      fprintf(stderr, "IPC: unable to access remote fd\n");
+      exit(1);
+   }
+
    return __remote_fd;
 }
 
@@ -65,9 +70,15 @@ void usb_init(void)
    READ_SYM(func, "usb_init")
    NOT_IMPLEMENTED
 
+   // Initialize remote fd
    int fd = get_remote();
-   char buf[64] = "usb_init";
-   send(fd, buf, strlen(buf));
+
+   // Create buffer
+   unsigned char pkt[3] = { UsbInit, 0, 0 };
+   send(fd, pkt, 3);
+
+   // Call locally
+   func();
 }
 
 int usb_find_busses(void)
