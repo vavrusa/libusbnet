@@ -7,9 +7,11 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
 
 # Targets
 set(sources   usbnet.c
+              ${SHARED_DIR}/protocol.c
               )
 set(headers   usbnet.h
               ${SHARED_DIR}/common.h
+              ${SHARED_DIR}/protocol.h
               )
 
 add_library(usbnet SHARED ${sources} ${headers})

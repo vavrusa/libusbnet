@@ -112,12 +112,32 @@ void ServerSocket::run()
 bool ServerSocket::handle(int fd)
 {
    Socket c(fd);
-   char buf[2048];
-   int rcvd = c.recv(buf, 2048 - 1);
-   if(rcvd <= 0)
-      return false;
+   char buf[256 + 2] = {0};
+   char* dst = buf;
+   int rcvd = 0, pending = 2;
 
-   buf[rcvd] = '\0';
-   cout << "Received (" << rcvd << " b): " << buf << "\n";
+   while(pending != 0) {
+      rcvd = c.recv(dst, pending);
+      fprintf(stderr, "Read: %d pending %d (val 0x%x).\n", rcvd, pending, *dst);
+      if(rcvd <= 0)
+         return false;
+      pending -= rcvd;
+      dst += rcvd;
+   }
+
+   pending = buf[1];
+   printf("Call: 0x%x expected length: %d B\n", buf[0], pending);
+
+   while(pending != 0) {
+      rcvd = c.recv(dst, pending);
+      fprintf(stderr, "Read: %d pending %d.\n", rcvd, pending);
+      if(rcvd <= 0)
+         return false;
+      pending -= rcvd;
+      dst += rcvd;
+   }
+
+   printf("Call: 0x%x loaded payload.\n", buf[0]);
+
    return true;
 }
