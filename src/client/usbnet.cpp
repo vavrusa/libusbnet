@@ -20,6 +20,8 @@
 #include "clientsocket.hpp"
 #include "common.h"
 #include <sys/shm.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <cstdlib>
 #include <cstdio>
 
@@ -35,6 +37,10 @@ int main(int argc, char* argv[])
       printf("Connection failed.\n");
       return EXIT_FAILURE;
    }
+
+   // Disable TCP buffering
+   int flag = 1;
+   setsockopt(remote.sock(), IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
 
    // Create SHM segment
    int shm_id = 0;
