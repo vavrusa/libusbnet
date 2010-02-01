@@ -36,10 +36,17 @@ class ServerSocket : public Socket
 
    protected:
 
-   /** Handle incoming event.
+   /** Handle incoming data.
      * \param fd
      */
-   bool handle(int fd);
+   bool read(int fd);
+
+   /** Handle incoming packet.
+     * \param fd source fd
+     * \param op packet opcode
+     * TODO: implement shared data buffer
+     */
+   virtual bool handle(int fd, int op) = 0;
 
    private:
 

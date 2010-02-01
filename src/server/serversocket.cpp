@@ -18,9 +18,11 @@
  ***************************************************************************/
 
 #include "serversocket.hpp"
+#include "protocol.h"
 #include <iostream>
 #include <vector>
 #include <cstdio>
+#include <cstring>
 #include <sys/poll.h>
 using std::cout;
 
@@ -89,7 +91,7 @@ void ServerSocket::run()
                }
                else {
                   cout << "Incoming data (fd " << it->fd << ").\n";
-                  if(!handle(it->fd))
+                  if(!read(it->fd))
                      it->revents |= POLLHUP;
                }
             }
@@ -109,35 +111,19 @@ void ServerSocket::run()
    cout << "Stopping server.\n";
 }
 
-bool ServerSocket::handle(int fd)
+bool ServerSocket::read(int fd)
 {
-   Socket c(fd);
-   char buf[256 + 2] = {0};
-   char* dst = buf;
-   int rcvd = 0, pending = 2;
+   char buf[4096];
+   packet_t pkt = pkt_create(buf, 4096);
 
-   while(pending != 0) {
-      rcvd = c.recv(dst, pending);
-      fprintf(stderr, "Read: %d pending %d (val 0x%x).\n", rcvd, pending, *dst);
-      if(rcvd <= 0)
-         return false;
-      pending -= rcvd;
-      dst += rcvd;
+   // Read packet
+   if(pkt_recv(fd, &pkt) < 0) {
+      cout << "Error when reading data (fd " << fd << ").\n";
+      return false;
    }
 
-   pending = buf[1];
-   printf("Call: 0x%x expected length: %d B\n", buf[0], pending);
-
-   while(pending != 0) {
-      rcvd = c.recv(dst, pending);
-      fprintf(stderr, "Read: %d pending %d.\n", rcvd, pending);
-      if(rcvd <= 0)
-         return false;
-      pending -= rcvd;
-      dst += rcvd;
-   }
-
-   printf("Call: 0x%x loaded payload.\n", buf[0]);
+   // Handle incoming packet
+   handle(fd, buf[0]);
 
    return true;
 }
