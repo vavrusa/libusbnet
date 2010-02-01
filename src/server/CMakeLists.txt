@@ -6,10 +6,13 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
 
 # Targets
 set(sources   usbexportd.cpp
+              usbservice.cpp
               serversocket.cpp
               ${SHARED_DIR}/socket.cpp
+              ${SHARED_DIR}/protocol.c
               )
 set(headers   serversocket.hpp
+              usbservice.hpp
               ${SHARED_DIR}/socket.hpp
               )
 

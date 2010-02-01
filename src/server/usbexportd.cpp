@@ -17,23 +17,23 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
 ***************************************************************************/
 
-#include "serversocket.hpp"
+#include "usbservice.hpp"
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
 
 int main(int argc, char* argv[])
 {
    // Create server socket
-   ServerSocket server;
-   if(server.listen(22222) != Socket::Ok) {
+   UsbService service;
+   if(service.listen(22222) != Socket::Ok) {
       return EXIT_FAILURE;
    }
 
    // Process client requests
-   server.run();
+   service.run();
 
    // Close socket
-   if(server.close() != Socket::Ok) {
+   if(service.close() != Socket::Ok) {
       return EXIT_FAILURE;
    }
 
