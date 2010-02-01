@@ -68,7 +68,6 @@ void usb_init(void)
 {
    static void (*func)(void) = NULL;
    READ_SYM(func, "usb_init")
-   NOT_IMPLEMENTED
 
    // Initialize remote fd
    int fd = get_remote();
@@ -117,9 +116,30 @@ int usb_find_devices(void)
 {
    static int (*func)(void) = NULL;
    READ_SYM(func, "usb_find_devices")
-   NOT_IMPLEMENTED
 
-   return 0;
+   // Get remote fd
+   int fd = get_remote();
+
+   // Create buffer
+   char buf[32];
+   packet_t pkt = pkt_create(buf, 32);
+   pkt_init(&pkt, UsbFindDevices);
+   pkt_send(fd, &pkt);
+
+   // Get number of changes
+   int res = 0;
+   param_t param;
+   pkt_recv(fd, &pkt);
+   pkt_begin(&pkt, &param);
+   if(param != pkt_end(&pkt)) {
+      if(param_type(param) == IntegerType)
+         res = *((int*)param_val(param));
+
+      printf("%s: returned %d\n", __func__, res);
+   }
+
+   // Call locally
+   return func() + res;
 }
 
 struct usb_bus* usb_get_busses(void)

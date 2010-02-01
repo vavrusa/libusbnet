@@ -35,6 +35,7 @@ class UsbService : public ServerSocket
    /* libusb implementations. */
    void usb_init(int fd, int size, const char* data);
    void usb_find_busses(int fd, int size, const char* data);
+   void usb_find_devices(int fd, int size, const char* data);
 };
 
 #endif // __usbservice_hpp__
