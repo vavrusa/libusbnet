@@ -94,8 +94,7 @@ uint32_t pkt_recv(int fd, packet_t* dst)
 
    // DEBUG: dump
    #ifdef DEBUG
-   printf("Packet: loaded all %u bytes payload %d expected %d.\n", dst->size, size, pending);
-   //pkt_dump(dst->buf, dst->size);
+   pkt_dump(dst->buf, dst->size);
    #endif
 
    // Return packet size
@@ -169,8 +168,10 @@ void pkt_begin(packet_t* pkt, sym_t* sym)
    sym->len = 0;
 
    // Check packet size
-   if(pkt_size(pkt) > PACKET_MINSIZE) {
-      sym->next = pkt->buf + PACKET_MINSIZE;
+   if(pkt_size(pkt) > 1) {
+      uint32_t pktsize;
+      int len = unpack_size(pkt->buf + 1, &pktsize);
+      sym->next = pkt->buf + 1 + len;
       sym->cur = NULL;
       sym_next(sym);
    }
@@ -222,13 +223,19 @@ void* sym_next(sym_t* sym)
    // Save ptrs
    sym->next = p + sym->len;
 
-#ifdef DEBUG
-   printf(" - symbol type: 0x%02x length: %d first byte: 0x%02x\n",
-          sym->type, sym->len, *(const char*)sym->val);
-#endif
-
    // Return current
    return sym->cur;
+}
+
+void* sym_enter(sym_t* sym)
+{
+   // Get symbol header size
+   uint32_t bsize;
+   int len = unpack_size(sym->cur + 1, &bsize);
+
+   // Shift by header size and use as next
+   sym->next = sym->cur + 1 + len;
+   return sym_next(sym);
 }
 
 int as_uint(void* data, uint32_t bytes)

@@ -144,22 +144,25 @@ int usb_find_devices(void)
       }
 
       // Get busses
-      sym_next(&sym);
-      int i = 0;
-      while(i < 100) {
+      for(;;) {
 
          // Evaluate
          if(sym.type == OctetType)
-            printf("      string value: %s\n", as_string(sym.val, sym.len));
+            printf("* string value: %s\n", as_string(sym.val, sym.len));
          if(sym.type == IntegerType)
-            printf("      int value: %u\n", as_uint(sym.val, sym.len));
+            printf("* int value: %u\n", as_uint(sym.val, sym.len));
 
-         // Last symbol
          if(sym.next == pkt_end(&pkt))
             break;
 
-         sym_next(&sym);
-         ++i;
+         // Check symbol
+         if(sym.type & StructureType) {
+            printf("<entering structure 0x%02x>\n", sym.type);
+            sym_enter(&sym);
+         }
+         else
+            sym_next(&sym);
+
       }
    }
 

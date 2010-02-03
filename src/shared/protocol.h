@@ -150,6 +150,11 @@ void pkt_dump(const char* pkt, uint32_t size);
   */
 void* sym_next(sym_t* sym);
 
+/** Step in current symbol (if structural type).
+  * \return current symbol ptr
+  */
+void* sym_enter(sym_t* sym);
+
 /** Interpret symbol as unsigned integer.
   */
 int as_uint(void* data, uint32_t bytes);
