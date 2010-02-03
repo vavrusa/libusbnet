@@ -189,7 +189,7 @@ void pkt_dump(const char* buf, uint32_t size)
    uint32_t i = 0;
    for(i = 0; i < size; ++i) {
       if(i == 0 || i % 8 == 0) {
-         if(i == 320) {
+         if(i == 160) {
             printf("\n ...");
             break;
          }
