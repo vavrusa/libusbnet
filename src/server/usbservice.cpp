@@ -18,10 +18,10 @@
  ***************************************************************************/
 
 #include "usbservice.hpp"
-#include "protocol.h"
-#include <cstdio>
+#include "protocol.hpp"
 #include <netinet/tcp.h>
 #include <usb.h>
+#include <cstdio>
 
 UsbService::UsbService(int fd)
    : ServerSocket(fd)
@@ -31,16 +31,20 @@ UsbService::UsbService(int fd)
    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
 }
 
-bool UsbService::handle(int fd, int op)
+bool UsbService::handle(int fd, Packet& pkt)
 {
+   // Check size
+   if(pkt.size() <= 0)
+      return false;
+
    // Packet handling
-   switch(op)
+   switch(pkt.op())
    {
-      case UsbInit:        usb_init(fd, 0, NULL);         break;
-      case UsbFindBusses:  usb_find_busses(fd, 0, NULL);  break;
-      case UsbFindDevices: usb_find_devices(fd, 0, NULL); break;
+      case UsbInit:        usb_init(fd, pkt);         break;
+      case UsbFindBusses:  usb_find_busses(fd, pkt);  break;
+      case UsbFindDevices: usb_find_devices(fd, pkt); break;
       default:
-         fprintf(stderr, "Call:  0x%x unhandled call type (fd %d).\n", op, fd);
+         fprintf(stderr, "Call:  0x%02x unhandled call type (fd %d).\n", pkt.op(), fd);
          return false;
          break;
    }
@@ -48,37 +52,58 @@ bool UsbService::handle(int fd, int op)
    return true;
 }
 
-void UsbService::usb_init(int fd, int size, const char* data)
+void UsbService::usb_init(int fd, Packet& in)
 {
    // Call, no ACK
    printf("Call: usb_init()\n");
    ::usb_init();
 }
 
-void UsbService::usb_find_busses(int fd, int size, const char* data)
+void UsbService::usb_find_busses(int fd, Packet& in)
 {
    // Call
+   // Can't guarantee correct number in case of multi-client environment
    int res = ::usb_find_busses();
    printf("Call: usb_find_busses() = %d\n", res);
 
    // Send result
-   char buf[32];
-   packet_t pkt = pkt_create(buf, 32);
-   pkt_init(&pkt, UsbFindBusses);
-   pkt_append(&pkt, IntegerType, sizeof(res), &res);
-   pkt_send(fd, &pkt);
+   Packet pkt(UsbFindBusses);
+   pkt.addUInt32(res);
+   pkt.send(fd);
 }
 
-void UsbService::usb_find_devices(int fd, int size, const char* data)
+void UsbService::usb_find_devices(int fd, Packet& in)
 {
-   // Call
+   // WARNING: Can't guarantee correct number in case of multi-client environment
    int res = ::usb_find_devices();
    printf("Call: usb_find_devices() = %d\n", res);
 
+   // Prepare result packet
+   Packet pkt(UsbFindDevices);
+   pkt.addUInt32(res);
+
+   // Add existing busses and devices
+   struct usb_bus* bus = 0;
+   for(bus = ::usb_get_busses(); bus; bus = bus->next) {
+
+      /* char dirname[PATH_MAX + 1];
+         struct usb_device *devices;
+         u_int32_t location;
+         struct usb_device *root_dev;
+       */
+
+      Block block = pkt.writeBlock(StructureType);
+      block.addString(bus->dirname);
+      block.addUInt32(bus->location);
+
+      // TODO: only top-level devices
+      for(struct usb_device* dev = bus->devices; dev; dev = dev->next) {
+      }
+
+      // Finalize block
+      block.finalize();
+   }
+
    // Send result
-   char buf[32];
-   packet_t pkt = pkt_create(buf, 32);
-   pkt_init(&pkt, UsbFindDevices);
-   pkt_append(&pkt, IntegerType, sizeof(res), &res);
-   pkt_send(fd, &pkt);
+   pkt.send(fd);
 }

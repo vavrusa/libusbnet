@@ -28,14 +28,14 @@ class UsbService : public ServerSocket
 
    /** Reimplemented packet handling.
      */
-   virtual bool handle(int fd, int op);
+   virtual bool handle(int fd, Packet& pkt);
 
    protected:
 
    /* libusb implementations. */
-   void usb_init(int fd, int size, const char* data);
-   void usb_find_busses(int fd, int size, const char* data);
-   void usb_find_devices(int fd, int size, const char* data);
+   void usb_init(int fd, Packet& in);
+   void usb_find_busses(int fd, Packet& in);
+   void usb_find_devices(int fd, Packet& in);
 };
 
 #endif // __usbservice_hpp__

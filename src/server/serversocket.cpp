@@ -18,11 +18,7 @@
  ***************************************************************************/
 
 #include "serversocket.hpp"
-#include "protocol.h"
 #include <iostream>
-#include <vector>
-#include <cstdio>
-#include <cstring>
 #include <sys/poll.h>
 using std::cout;
 
@@ -113,17 +109,17 @@ void ServerSocket::run()
 
 bool ServerSocket::read(int fd)
 {
-   char buf[4096];
-   packet_t pkt = pkt_create(buf, 4096);
+   Packet pkt;
 
    // Read packet
-   if(pkt_recv(fd, &pkt) < 0) {
+   if(pkt.recv(fd) < 0) {
       cout << "Error when reading data (fd " << fd << ").\n";
       return false;
    }
 
    // Handle incoming packet
-   handle(fd, buf[0]);
+   pkt.dump();
+   handle(fd, pkt);
 
    return true;
 }

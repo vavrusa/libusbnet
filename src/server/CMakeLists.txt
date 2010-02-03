@@ -10,10 +10,12 @@ set(sources   usbexportd.cpp
               serversocket.cpp
               ${SHARED_DIR}/socket.cpp
               ${SHARED_DIR}/protocol.c
+              ${SHARED_DIR}/protocol.cpp
               )
 set(headers   serversocket.hpp
               usbservice.hpp
               ${SHARED_DIR}/socket.hpp
+              ${SHARED_DIR}/protocol.hpp
               )
 
 add_executable(usbexportd ${sources} ${headers})

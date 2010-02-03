@@ -21,6 +21,7 @@
 #ifndef __serversocket_hpp__
 #define __serversocket_hpp__
 #include "socket.hpp"
+#include "protocol.hpp"
 
 /** Server socket reimplementation. */
 class ServerSocket : public Socket
@@ -46,7 +47,7 @@ class ServerSocket : public Socket
      * \param op packet opcode
      * TODO: implement shared data buffer
      */
-   virtual bool handle(int fd, int op) = 0;
+   virtual bool handle(int fd, Packet& pkt) = 0;
 
    private:
 
