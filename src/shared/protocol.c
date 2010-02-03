@@ -58,11 +58,11 @@ int pkt_size(packet_t* pkt)
    return pkt->pos;
 }
 
-int pkt_send(int fd, packet_t* pkt)
+int pkt_send(int fd, const char* buf, int size)
 {
    // Send buffer
-   int res = send(fd, pkt->buf, pkt_size(pkt), 0);
-   printf("%s(%d, size %d) = %d\n", __func__, fd, pkt_size(pkt), res);
+   int res = send(fd, buf, size, 0);
+   printf("%s(%d, size %d) = %d\n", __func__, fd, size, res);
    return res;
 }
 
@@ -73,35 +73,63 @@ int pkt_recv(int fd, packet_t* dst)
    int rcvd = 0; uint16_t pending = PACKET_MINSIZE;
 
    // Read packet header
-   while(pending != 0) {
-      rcvd = recv(fd, p, pending, 0);
-      printf("Read: %d pending %d (val 0x%x).\n", rcvd, pending, *p);
-      if(rcvd <= 0) {
-         return -1;
-      }
-      pending -= rcvd;
-      p += rcvd;
-   }
+   pkt_recv_header(fd, dst->buf);
 
    // Read packet payload
    dst->pos = PACKET_MINSIZE;
-   pending = (uint16_t) *(dst->buf + 1);
-   printf("Packet: 0x%x 0x%x 0x%x (expected size %dB)\n",
-          dst->buf[0], dst->buf[1], dst->buf[2], pending);
-
-   while(pending != 0) {
-      rcvd = recv(fd, p, pending, 0);
-      if(rcvd <= 0)
-         return -1;
-      printf("Read: %d pending %d.\n", rcvd, pending);
-      pending -= rcvd;
-      p += rcvd;
-   }
+   pkt_recv_payload(fd, dst->buf);
 
    // Handle incoming packet
    printf("Packet: loaded payload.\n");
    dst->pos += (uint16_t) *(dst->buf + 1);
+
+   // DEBUG: dump
+   #ifdef DEBUG
+   pkt_dump(dst->buf, dst->pos);
+   #endif
+
+   // Return packet size
    return dst->pos;
+}
+
+int pkt_recv_header(int fd, char *buf)
+{
+   int rcvd = 0, total = 0;
+   uint16_t pending = PACKET_MINSIZE;
+
+   // Read packet header
+   while(pending != 0) {
+      rcvd = recv(fd, buf, pending, 0);
+      printf("Read: %d pending %d (val 0x%x).\n", rcvd, pending, *buf);
+      if(rcvd <= 0) {
+         return -1;
+      }
+      pending -= rcvd;
+      buf += rcvd;
+      total += rcvd;
+   }
+
+   return total;
+}
+
+int pkt_recv_payload(int fd, char *buf)
+{
+   int rcvd = 0, total = 0;
+   uint16_t pending = 0;
+
+   pending = (uint16_t) *(buf + 1);
+   buf += PACKET_MINSIZE;
+   while(pending != 0) {
+      rcvd = recv(fd, buf, pending, 0);
+      if(rcvd <= 0)
+         return -1;
+      printf("Read: %d pending %d.\n", rcvd, pending);
+      pending -= rcvd;
+      buf += rcvd;
+      total += rcvd;
+   }
+
+   return total;
 }
 
 int pkt_append(packet_t* pkt, Type type, uint16_t len, void* val)
@@ -133,4 +161,15 @@ void pkt_begin(packet_t* pkt, param_t* param)
 void* pkt_end(packet_t* pkt)
 {
    return pkt->buf + pkt->pos;
+}
+
+void pkt_dump(const char* buf, int size)
+{
+   printf("Packet (%dB):\n", size);
+   int i = 0;
+   for(i = 0; i < size; ++i) {
+      printf("0x%02x ", (char) buf[i]);
+   }
+   if((size - 1) % 8 != 0)
+      printf("\n");
 }

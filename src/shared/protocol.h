@@ -22,11 +22,12 @@
 #define __protocol_h__
 #include <stdint.h>
 
-/** ASN.1/BER semantic types
+/** ASN.1 semantic types
   */
 typedef enum {
 
    // Basic types
+   InvalidType    = 0x00,
    BoolType       = 0x01,
    IntegerType    = 0x02,
    NullType       = 0x05,
@@ -34,7 +35,8 @@ typedef enum {
    SequenceType   = 0x10,
    EnumType       = 0x0A,
    SetType        = 0x11,
-   CallType       = 0x20,
+   StructureType  = 0x20,
+   CallType       = StructureType|SequenceType,
 
    // Calls
    NullRequest    = CallType,       // Ping
@@ -63,7 +65,7 @@ typedef char* param_t;
 
 #define PACKET_MINSIZE 3 // 1B op + 2B size
 #define PARAM_TLEN     sizeof(char)
-#define PARAM_LLEN     sizeof(uint16_t)
+#define PARAM_LLEN     sizeof(uint8_t)
 #define PARAM_LEN      PARAM_TLEN+PARAM_LLEN
 
 /** Initialize packet on existing buffer.
@@ -103,14 +105,15 @@ int pkt_size(packet_t* pkt);
   * \param val  parameter value
   * \return bytes written
   */
-int pkt_append(packet_t* pkt, Type type, uint16_t, void* val);
+int pkt_append(packet_t* pkt, Type type, uint16_t len, void* val);
 
 /** Send packet.
   * \param fd destination filedescriptor
-  * \param pkt packet
+  * \param buf packet buffer
+  * \param size packet buffer size
   * \return send() value
   */
-int pkt_send(int fd, packet_t* pkt);
+int pkt_send(int fd, const char* buf, int size);
 
 /** Receive packet.
   * \param fd source fd
@@ -118,6 +121,16 @@ int pkt_send(int fd, packet_t* pkt);
   * \return recv() return value
   */
 int pkt_recv(int fd, packet_t* dst);
+
+/** Receive packet header.
+  * Ensure buf is at least PACKET_MINSIZE.
+  */
+int pkt_recv_header(int fd, char* buf);
+
+/** Receive packet payload.
+  * Ensure buf contains header.
+  */
+int pkt_recv_payload(int fd, char* buf);
 
 /** Return packet first symbol.
   * \param pkt source packet
@@ -129,6 +142,9 @@ void pkt_begin(packet_t* pkt, param_t* param);
   * Param length + 1.
   */
 void* pkt_end(packet_t* pkt);
+
+/** Dump packet (debugging). */
+void pkt_dump(const char* pkt, int size);
 
 /** Return parameter type.
   * \return parameter type
@@ -143,7 +159,7 @@ void* pkt_end(packet_t* pkt);
 /** Return parameter value.
   * \return parameter value
   */
-#define param_val(param) ((param) + PARAM_LEN)
+#define param_val(param, type) *(type*)((param) + PARAM_LEN)
 
 /** Next parameter.
   */

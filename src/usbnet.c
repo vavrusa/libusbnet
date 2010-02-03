@@ -29,6 +29,9 @@
 // Remote socket filedescriptor
 static int __remote_fd = -1;
 
+// Remote USB busses with devices
+static struct usb_bus* __remote_bus = 0;
+
 // Return remote filedescriptor
 static int get_remote() {
 
@@ -76,7 +79,7 @@ void usb_init(void)
    char buf[PACKET_MINSIZE];
    packet_t pkt = pkt_create(buf, PACKET_MINSIZE);
    pkt_init(&pkt, UsbInit);
-   pkt_send(fd, &pkt);
+   pkt_send(fd, pkt.buf, pkt_size(&pkt));
 
    // Call locally
    func();
@@ -94,7 +97,7 @@ int usb_find_busses(void)
    char buf[32];
    packet_t pkt = pkt_create(buf, 32);
    pkt_init(&pkt, UsbFindBusses);
-   pkt_send(fd, &pkt);
+   pkt_send(fd, pkt.buf, pkt_size(&pkt));
 
    // Get number of changes
    int res = 0;
@@ -103,7 +106,7 @@ int usb_find_busses(void)
    pkt_begin(&pkt, &param);
    if(param != pkt_end(&pkt)) {
       if(param_type(param) == IntegerType)
-         res = *((int*)param_val(param));
+         res = param_val(param, uint32_t);
 
       printf("%s: returned %d\n", __func__, res);
    }
@@ -116,15 +119,16 @@ int usb_find_devices(void)
 {
    static int (*func)(void) = NULL;
    READ_SYM(func, "usb_find_devices")
+   NOT_IMPLEMENTED
 
    // Get remote fd
    int fd = get_remote();
 
    // Create buffer
-   char buf[32];
-   packet_t pkt = pkt_create(buf, 32);
+   char buf[4096];
+   packet_t pkt = pkt_create(buf, 4096);
    pkt_init(&pkt, UsbFindDevices);
-   pkt_send(fd, &pkt);
+   pkt_send(fd, pkt.buf, pkt_size(&pkt));
 
    // Get number of changes
    int res = 0;
@@ -133,10 +137,11 @@ int usb_find_devices(void)
    pkt_begin(&pkt, &param);
    if(param != pkt_end(&pkt)) {
       if(param_type(param) == IntegerType)
-         res = *((int*)param_val(param));
-
+         res = param_val(param, uint32_t);
       printf("%s: returned %d\n", __func__, res);
    }
+
+   // TODO: fetch usb_busses and usb_devices list to global
 
    // Call locally
    return func() + res;
@@ -148,6 +153,8 @@ struct usb_bus* usb_get_busses(void)
    READ_SYM(func, "usb_get_busses")
    NOT_IMPLEMENTED
 
-   return NULL;
+   // TODO: merge both Local/Remote bus in future
+
+   return __remote_bus;
 }
 
