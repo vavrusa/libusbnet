@@ -101,14 +101,15 @@ int usb_find_busses(void)
 
    // Get number of changes
    int res = 0;
-   param_t param;
-   pkt_recv(fd, &pkt);
-   pkt_begin(&pkt, &param);
-   if(param != pkt_end(&pkt)) {
-      if(param_type(param) == IntegerType)
-         res = param_val(param, uint32_t);
+   sym_t sym;
+   if(pkt_recv(fd, &pkt) > 0) {
+      pkt_begin(&pkt, &sym);
+      if(sym.cur != pkt_end(&pkt)) {
+         if(sym.type == IntegerType)
+            res = as_uint(sym.val, sym.len);
 
-      printf("%s: returned %d\n", __func__, res);
+         printf("%s: returned %d\n", __func__, res);
+      }
    }
 
    // Call locally
@@ -132,16 +133,35 @@ int usb_find_devices(void)
 
    // Get number of changes
    int res = 0;
-   param_t param;
-   pkt_recv(fd, &pkt);
-   pkt_begin(&pkt, &param);
-   if(param != pkt_end(&pkt)) {
-      if(param_type(param) == IntegerType)
-         res = param_val(param, uint32_t);
-      printf("%s: returned %d\n", __func__, res);
-   }
+   sym_t sym;
+   if(pkt_recv(fd, &pkt) > 0) {
+      pkt_begin(&pkt, &sym);
 
-   // TODO: fetch usb_busses and usb_devices list to global
+      // Get return value
+      if(sym.type == IntegerType) {
+         res = as_uint(sym.val, sym.len);
+         printf("%s: returned %d\n", __func__, res);
+      }
+
+      // Get busses
+      sym_next(&sym);
+      int i = 0;
+      while(i < 100) {
+
+         // Evaluate
+         if(sym.type == OctetType)
+            printf("      string value: %s\n", as_string(sym.val, sym.len));
+         if(sym.type == IntegerType)
+            printf("      int value: %u\n", as_uint(sym.val, sym.len));
+
+         // Last symbol
+         if(sym.next == pkt_end(&pkt))
+            break;
+
+         sym_next(&sym);
+         ++i;
+      }
+   }
 
    // Call locally
    return func() + res;

@@ -54,6 +54,14 @@ static const char* filename(const char* path) {
 #define NOT_IMPLEMENTED
 #endif
 
+/** Debug macro for marking functions deprecated. */
+#ifdef DEBUG
+#define DEPRECATED \
+#warning "function __func__ is deprecated."
+#else
+#define DEPRECATED
+#endif
+
 /** Load next symbol from linked shared libraries.
   * Return error if not found and exit with error state (1).
   */

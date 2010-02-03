@@ -32,6 +32,15 @@ Block::Block(buffer_t& sharedbuf, int pos)
    mCursor = mPos;
 }
 
+Block& Block::pushPacked(uint32_t val)
+{
+   // Pack number and append
+   char buf[6];
+   int size = pack_size(val, buf);
+   append(buf, size);
+   return *this;
+}
+
 Block& Block::append(const char* str, size_t size) {
    if(size == 0)
       size = strlen(str);
@@ -52,35 +61,32 @@ Block& Block::addNumeric(Type type, uint8_t len, uint32_t val)
 
    // Push Type and Length
    push((uint8_t) type);
-   push(len);
+   pushPacked(len);
 
    // Cast to ensure correct data on both Big and Little-Endian hosts
-   if(len == sizeof(uint32_t)) {
-      append((const char*) &val, sizeof(uint32_t));
-   }
-   if(len == sizeof(uint16_t)) {
-      uint16_t vval = val;
-      append((const char*) &vval, sizeof(uint16_t));
-   }
-   if(len == sizeof(uint8_t)) {
-      uint8_t vval = val;
-      append((const char*) &vval, sizeof(uint8_t));
-   }
+   uint8_t val8 = val, val16 = val;
+   if(len == sizeof(uint32_t)) append((const char*) &val,   sizeof(uint32_t));
+   if(len == sizeof(uint16_t)) append((const char*) &val16, sizeof(uint16_t));
+   if(len == sizeof(uint8_t))  append((const char*) &val8,  sizeof(uint8_t));
 
    return *this;
+}
+
+Block& Block::addData(const char* data, size_t size, Type type)
+{
+   push((uint8_t) type);
+   pushPacked(size);
+   append(data, size);
 }
 
 
 Block& Block::addString(const char* str, Type type)
 {
    if(str != 0) {
-      int len = strlen(str);
-      if(len > 255) {
-         std::cerr << "Warning: strings of more than 255 chars not supported yet.\n";
-      }
+      int len = strlen(str) + 1; // NULL byte
       push((uint8_t) type);
-      push((uint8_t) len);
-      append(str);
+      pushPacked(len);
+      append(str, len);
    }
 
    return *this;
@@ -89,10 +95,12 @@ Block& Block::addString(const char* str, Type type)
 Block& Block::finalize()
 {
    // Remaining bufsize
-   uint16_t ssize = mBuf.size() - startPos() - 1;
+   uint32_t block_size = mBuf.size() - startPos() - 1;
 
-   // Main struct
-   mBuf.insert(startPos() + 1, (const char*) &ssize, sizeof(ssize));
+   // Pack number
+   char buf[6];
+   int len = pack_size(block_size, buf);
+   mBuf.insert(startPos() + 1, buf, len);
 
    return *this;
 }
@@ -100,18 +108,27 @@ Block& Block::finalize()
 int Packet::recv(int fd)
 {
    // Prepare buffer
-   uint16_t size = PACKET_MINSIZE;
-   mBuf.resize(size);
-   if(pkt_recv_header(fd, (char*) mBuf.data()) < 0)
+   uint32_t hsize = PACKET_MINSIZE;
+   mBuf.resize(hsize);
+   if((hsize = pkt_recv_header(fd, (char*) mBuf.data())) == 0)
       return -1;
 
-   // Reserve buffer for payload
-   size = (uint16_t) *(mBuf.data() + 1);
-   mBuf.resize(PACKET_MINSIZE + size);
-   if(pkt_recv_payload(fd, (char*) mBuf.data()) < 0)
-      return -1;
+   // Unpack payload length
+   uint32_t pending = 0;
+   int len = unpack_size(mBuf.data() + 1, &pending);
+   std::cerr << "New size: " << hsize << " + " << pending << " len: " << len << "\n";
+   mBuf.resize(hsize + pending);
 
-   return size + PACKET_MINSIZE;
+   char* ptr = (char*) mBuf.data() + 1 + len;
+   uint32_t total = hsize + pending;
+
+   // Receive payload
+   if(pending > 0) {
+      if((hsize = recv_full(fd, ptr, pending)) == 0)
+         return -1;
+   }
+
+   return size();
 }
 
 void Packet::dump() {

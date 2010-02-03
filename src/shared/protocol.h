@@ -36,6 +36,7 @@ typedef enum {
    EnumType       = 0x0A,
    SetType        = 0x11,
    StructureType  = 0x20,
+   RawType        = StructureType + 1,
    CallType       = StructureType|SequenceType,
 
    // Calls
@@ -55,18 +56,20 @@ extern "C"
 
 /** Packet structure. */
 typedef struct {
-   unsigned size;
-   unsigned pos;
+   uint32_t bufsize;
+   uint32_t size;
    char* buf;
 } packet_t;
 
 /** Parameter structure. */
-typedef char* param_t;
+typedef struct {
+   void *cur, *next;
+   uint8_t type;
+   uint32_t len;
+   void*    val;
+} sym_t;
 
-#define PACKET_MINSIZE 3 // 1B op + 2B size
-#define PARAM_TLEN     sizeof(char)
-#define PARAM_LLEN     sizeof(uint8_t)
-#define PARAM_LEN      PARAM_TLEN+PARAM_LLEN
+#define PACKET_MINSIZE (sizeof(uint8_t)+sizeof(uint8_t)+sizeof(uint32_t)) // 1B op + 1B prefix + 4B length
 
 /** Initialize packet on existing buffer.
   * \param buf must be char* or char[]
@@ -79,7 +82,7 @@ typedef char* param_t;
   * \param size required packet size
   * \return new packet
   */
-packet_t* pkt_new(int size);
+packet_t* pkt_new(uint32_t size);
 
 /** Free allocated packet.
   * Use only with dynamically allocated packets.
@@ -92,11 +95,6 @@ void pkt_del(packet_t* pkt);
   * \param op packet opcode
   */
 void pkt_init(packet_t* pkt, Type op);
-
-/** Return packet size.
-  * \param pkt packet
-  */
-int pkt_size(packet_t* pkt);
 
 /** Append parameter to packet.
   * \param pkt packet
@@ -118,52 +116,59 @@ int pkt_send(int fd, const char* buf, int size);
 /** Receive packet.
   * \param fd source fd
   * \param pkt destination packet
-  * \return recv() return value
+  * \return packet size on success, 0 on error
   */
-int pkt_recv(int fd, packet_t* dst);
+uint32_t pkt_recv(int fd, packet_t* dst);
 
 /** Receive packet header.
   * Ensure buf is at least PACKET_MINSIZE.
+  * \return header size on success, 0 on error
   */
-int pkt_recv_header(int fd, char* buf);
+uint32_t pkt_recv_header(int fd, char* buf);
 
-/** Receive packet payload.
-  * Ensure buf contains header.
+/** Block until all pending data is received.
   */
-int pkt_recv_payload(int fd, char* buf);
+uint32_t recv_full(int fd, char* buf, uint32_t pending);
 
-/** Return packet first symbol.
+/** Return first symbol in packet.
   * \param pkt source packet
   * \param param target symbol
   */
-void pkt_begin(packet_t* pkt, param_t* param);
+void pkt_begin(packet_t* pkt, sym_t* sym);
 
 /** Return packet end.
   * Param length + 1.
   */
 void* pkt_end(packet_t* pkt);
 
-/** Dump packet (debugging). */
-void pkt_dump(const char* pkt, int size);
-
-/** Return parameter type.
-  * \return parameter type
+/** Dump packet (debugging).
   */
-#define param_type(param) (char)*(param)
+void pkt_dump(const char* pkt, uint32_t size);
 
-/** Return parameter length.
-  * \return parameter length
+/** Next symbol.
+  * \return current symbol ptr
   */
-#define param_len(param) (uint16_t)*((param) + PARAM_TLEN)
+void* sym_next(sym_t* sym);
 
-/** Return parameter value.
-  * \return parameter value
+/** Interpret symbol as unsigned integer.
   */
-#define param_val(param, type) *(type*)((param) + PARAM_LEN)
+int as_uint(void* data, uint32_t bytes);
 
-/** Next parameter.
+/** Interpret symbol as string.
   */
-#define param_next(param) ((param) + PARAM_LEN + param_len((param)))
+const char* as_string(void* data, uint32_t bytes);
+
+/** Pack size to byte array.
+  * \warning Array has to be at least 5B long for uint32.
+  * \return packed size, -1 on error
+  */
+int pack_size(uint32_t val, char* dst);
+
+/** Unpack size from byte array.
+  * \warning Array has to be at least 5B long for uint32.
+  * \return unpacked value
+  */
+int unpack_size(const char* src, uint32_t* dst);
 
 #ifdef __cplusplus
 }

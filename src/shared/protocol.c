@@ -22,7 +22,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-packet_t* pkt_new(int size) {
+packet_t* pkt_new(uint32_t size) {
 
    // Minimum packet size is PACKET_MINSIZE
    if(size < PACKET_MINSIZE) {
@@ -32,7 +32,7 @@ packet_t* pkt_new(int size) {
 
    packet_t* pkt = malloc(sizeof(packet_t));
    pkt->buf = malloc(size * sizeof(char));
-   pkt->size = size;
+   pkt->bufsize = size;
    return pkt;
 }
 
@@ -44,18 +44,19 @@ void pkt_del(packet_t* pkt) {
 void pkt_init(packet_t* pkt, Type op)
 {
    // Clear
-   memset(pkt->buf, 0, pkt->size);
+   memset(pkt->buf, 0, pkt->bufsize);
 
    // Set opcode
    pkt->buf[0] = (char) op;
+   pkt->buf[1] = 0x84; // TODO: make blocks in C API
 
    // Set data pos
-   pkt->pos = PACKET_MINSIZE;
+   pkt->size = PACKET_MINSIZE;
 }
 
-int pkt_size(packet_t* pkt)
+uint32_t pkt_size(packet_t* pkt)
 {
-   return pkt->pos;
+   return pkt->size;
 }
 
 int pkt_send(int fd, const char* buf, int size)
@@ -66,110 +67,230 @@ int pkt_send(int fd, const char* buf, int size)
    return res;
 }
 
-int pkt_recv(int fd, packet_t* dst)
+uint32_t pkt_recv(int fd, packet_t* dst)
 {
-   // Prepare
-   char* p = dst->buf;
-   int rcvd = 0; uint16_t pending = PACKET_MINSIZE;
+   // Prepare packet
+   uint32_t size = 0;
+   dst->size = 0;
 
    // Read packet header
-   pkt_recv_header(fd, dst->buf);
+   if((size = pkt_recv_header(fd, dst->buf)) == 0)
+      return 0;
+   dst->size += size;
 
-   // Read packet payload
-   dst->pos = PACKET_MINSIZE;
-   pkt_recv_payload(fd, dst->buf);
+   // Unpack payload length
+   uint32_t pending = 0;
+   int len = unpack_size(dst->buf + 1, &pending);
+   char* ptr = dst->buf + 1 + len;
 
-   // Handle incoming packet
-   printf("Packet: loaded payload.\n");
-   dst->pos += (uint16_t) *(dst->buf + 1);
+   // Receive payload
+   if(pending > 0) {
+      if((size = recv_full(fd, ptr, pending)) == 0)
+         return 0;
+
+      dst->size += size;
+      printf("Packet: loaded payload.\n");
+   }
 
    // DEBUG: dump
    #ifdef DEBUG
-   pkt_dump(dst->buf, dst->pos);
+   printf("Packet: loaded all %u bytes payload %d expected %d.\n", dst->size, size, pending);
+   //pkt_dump(dst->buf, dst->size);
    #endif
 
    // Return packet size
-   return dst->pos;
+   return dst->size;
 }
 
-int pkt_recv_header(int fd, char *buf)
+uint32_t recv_full(int fd, char* buf, uint32_t pending)
 {
-   int rcvd = 0, total = 0;
-   uint16_t pending = PACKET_MINSIZE;
-
    // Read packet header
+   int rcvd = 0;
+   uint32_t read = 0;
    while(pending != 0) {
-      rcvd = recv(fd, buf, pending, 0);
-      printf("Read: %d pending %d (val 0x%x).\n", rcvd, pending, *buf);
-      if(rcvd <= 0) {
-         return -1;
-      }
+
+      if((rcvd = recv(fd, buf, pending, 0)) <= 0)
+         return 0;
+
       pending -= rcvd;
       buf += rcvd;
-      total += rcvd;
+      read += rcvd;
+      printf("Read: %d pending %u.\n", rcvd, pending);
    }
 
-   return total;
+   return read;
 }
 
-int pkt_recv_payload(int fd, char *buf)
+uint32_t pkt_recv_header(int fd, char *buf)
 {
-   int rcvd = 0, total = 0;
-   uint16_t pending = 0;
+   // Read packet header
+   printf("Receiving header.\n");
+   uint32_t rcvd = 0;
+   if((rcvd = recv_full(fd, buf, 2)) == 0)
+      return 0;
 
-   pending = (uint16_t) *(buf + 1);
-   buf += PACKET_MINSIZE;
-   while(pending != 0) {
-      rcvd = recv(fd, buf, pending, 0);
-      if(rcvd <= 0)
-         return -1;
-      printf("Read: %d pending %d.\n", rcvd, pending);
-      pending -= rcvd;
-      buf += rcvd;
-      total += rcvd;
+   // Multi-byte
+   unsigned c = (unsigned char) buf[1];
+   if(c > 0x80) {
+      if((rcvd = recv_full(fd, buf + 2, c - 0x80)) == 0)
+         return 0;
+      rcvd += 2;
    }
 
-   return total;
+   return rcvd;
 }
 
 int pkt_append(packet_t* pkt, Type type, uint16_t len, void* val)
 {
-   char* dst = pkt->buf + pkt->pos;
+   char* dst = pkt->buf + pkt->size;
 
    // Write T-L-V
-   uint16_t written = 0;
+   uint16_t written = 0; char prefix = 0x82;
    memcpy(dst + written, &type, sizeof(char));    written += sizeof(char);
+   memcpy(dst + written, &prefix, sizeof(char));  written += sizeof(char);
    memcpy(dst + written, &len, sizeof(uint16_t)); written += sizeof(uint16_t);
-   memcpy(dst + written, val, len);               written += len;
+   if(len > 0) {
+      memcpy(dst + written, val, len);
+      written += len;
+   }
    printf("Packet: appended type: 0x%x len: %d total: %d\n", type, len, written);
 
    // Update write pos and packet size
-   pkt->pos += written;
-   uint16_t nsize = pkt->pos - PACKET_MINSIZE;
-   memcpy(pkt->buf + 1, &nsize, sizeof(uint16_t));
+   pkt->size += written;
+   uint32_t nsize = pkt->size - PACKET_MINSIZE;
+   memcpy(pkt->buf + 2, &nsize, sizeof(uint32_t));
    return written;
 }
 
-void pkt_begin(packet_t* pkt, param_t* param)
+void pkt_begin(packet_t* pkt, sym_t* sym)
 {
-   if(pkt_size(pkt) > PACKET_MINSIZE)
-      *param = pkt->buf + PACKET_MINSIZE;
+   // Invalidate symbol
+   sym->type = InvalidType;
+   sym->len = 0;
+
+   // Check packet size
+   if(pkt_size(pkt) > PACKET_MINSIZE) {
+      sym->next = pkt->buf + PACKET_MINSIZE;
+      sym->cur = NULL;
+      sym_next(sym);
+   }
    else
-      *param = pkt_end(pkt);
+      sym->cur = pkt_end(pkt);
 }
 
 void* pkt_end(packet_t* pkt)
 {
-   return pkt->buf + pkt->pos;
+   return pkt->buf + pkt->size;
 }
 
-void pkt_dump(const char* buf, int size)
+void pkt_dump(const char* buf, uint32_t size)
 {
-   printf("Packet (%dB):\n", size);
-   int i = 0;
+   printf("Packet (%dB):", size);
+   uint32_t i = 0;
    for(i = 0; i < size; ++i) {
-      printf("0x%02x ", (char) buf[i]);
+      if(i == 0 || i % 8 == 0) {
+         if(i == 320) {
+            printf("\n ...");
+            break;
+         }
+         printf("\n%4d | ", i);
+      }
+      printf("0x%02x ", (unsigned char) *(buf + i));
    }
-   if((size - 1) % 8 != 0)
-      printf("\n");
+   printf("\n");
+}
+
+void* sym_next(sym_t* sym)
+{
+   // Invalidate
+   sym->type = InvalidType;
+   sym->len = 0;
+
+   // Read type
+   sym->cur = sym->next;
+   char* p = sym->cur;
+   sym->type = *((uint8_t*) p);
+   ++p;
+
+   // Read length
+   sym->len = 0;
+   p += unpack_size(p, &sym->len);
+
+   // Read value
+   sym->val = p;
+
+   // Save ptrs
+   sym->next = p + sym->len;
+
+#ifdef DEBUG
+   printf(" - symbol type: 0x%02x length: %d first byte: 0x%02x\n",
+          sym->type, sym->len, *(const char*)sym->val);
+#endif
+
+   // Return current
+   return sym->cur;
+}
+
+int as_uint(void* data, uint32_t bytes)
+{
+   switch(bytes) {
+   case 1: return *((uint8_t*) data); break;
+   case 2: return *((uint16_t*) data); break;
+   case 4: return *((uint32_t*) data); break;
+   default: break;
+   }
+
+   // Invalid number of bytes
+   return 0;
+}
+
+const char* as_string(void* data, uint32_t bytes)
+{
+   return (const char*) data;
+}
+
+int pack_size(uint32_t val, char* dst)
+{
+   // 8bit value
+   if(val <= 0x80) {
+      dst[0] = (unsigned char) val;
+      return sizeof(char);
+   }
+
+   // 16bit value
+   if(val < ((uint16_t)~0)) {
+      uint16_t vval = val;
+      dst[0] = (0x80 + sizeof(uint16_t));
+      memcpy(dst + 1, (const char*) &vval, sizeof(uint16_t));
+      return sizeof(uint16_t) + 1;
+   }
+
+   // 32bit value
+   dst[0] = (0x80 + sizeof(uint32_t));
+   memcpy(dst + 1, (const char*) &val, sizeof(uint32_t));
+   return sizeof(uint32_t) + 1;
+}
+
+int unpack_size(const char* src, uint32_t* dst)
+{
+   // 8bit value
+   unsigned char c = (unsigned char) *src;
+   if(c <= 0x80) {
+      *dst = *((uint8_t*) (src));
+      return sizeof(uint8_t);
+   }
+
+   // 16bit value
+   if(c == 0x82) {
+      *dst = *((uint16_t*) (src + 1));
+      return sizeof(uint16_t) + 1;
+   }
+
+   // 32bit value
+   if(c == 0x84) {
+      *dst = *((uint32_t*) (src + 1));
+      return sizeof(uint32_t) + 1;
+   }
+
+   return 0;
 }

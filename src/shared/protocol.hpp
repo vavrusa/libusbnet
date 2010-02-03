@@ -56,6 +56,9 @@ class Block
       return *this;
    }
 
+   /** Write encoded length. */
+   Block& pushPacked(uint32_t val);
+
    /** Append raw data. */
    Block& append(const char* str, size_t size = 0);
 
@@ -80,6 +83,9 @@ class Block
    Block& addBool(bool val) {
       return addNumeric(BoolType, 1, (uint8_t) val);
    }
+
+   /** Add raw data. */
+   Block& addData(const char* data, size_t size, Type type = RawType);
 
    /* Integer encoding - 8,16,32 bits */
    Block& addUInt8(uint8_t val) {
