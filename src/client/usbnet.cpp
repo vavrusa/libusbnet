@@ -74,9 +74,8 @@ int main(int argc, char* argv[])
    if(argc > 1) {
       std::string cmd("LD_PRELOAD=\"");
       cmd.append(argv[1]);
-      cmd.append("\" \"");
+      cmd.append("\" ");
       cmd.append(argv[2]);
-      cmd.append("\"");
       printf("Executing: %s\n", cmd.c_str());
 
       int ret = system(cmd.c_str());
