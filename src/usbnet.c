@@ -80,9 +80,6 @@ void usb_init(void)
    packet_t pkt = pkt_create(buf, PACKET_MINSIZE);
    pkt_init(&pkt, UsbInit);
    pkt_send(fd, pkt.buf, pkt_size(&pkt));
-
-   // Call locally
-   func();
 }
 
 int usb_find_busses(void)
@@ -112,8 +109,8 @@ int usb_find_busses(void)
       }
    }
 
-   // Call locally
-   return func() + res;
+   // Return remote result
+   return res;
 }
 
 int usb_find_devices(void)
@@ -140,44 +137,138 @@ int usb_find_devices(void)
       // Get return value
       if(sym.type == IntegerType) {
          res = as_uint(sym.val, sym.len);
-         printf("%s: returned %d\n", __func__, res);
+         sym_next(&sym);
       }
+
+      // Allocate structures
+      struct usb_bus vbus;
+      vbus.next = __remote_bus;
+      struct usb_bus* rbus = &vbus;
 
       // Get busses
       for(;;) {
 
          // Evaluate
-         if(sym.type == OctetType)
-            printf("* string value: %s\n", as_string(sym.val, sym.len));
-         if(sym.type == IntegerType)
-            printf("* int value: %u\n", as_uint(sym.val, sym.len));
+         printf("sym 0x%02x len %d\n", sym.type, sym.len);
+         if(sym.type == StructureType) {
+            printf("<entering struct>\n");
+            sym_enter(&sym);
 
+            // Allocate bus
+            if(rbus->next == NULL) {
+
+               // Allocate next item
+               printf("<allocating new bus>\n");
+               struct usb_bus* nbus = malloc(sizeof(struct usb_bus));
+               memset(nbus, 0, sizeof(struct usb_bus));
+               rbus->next = nbus;
+               nbus->prev = rbus;
+               rbus = nbus;
+            }
+            else
+               rbus = rbus->next;
+
+            // Read dirname
+            if(sym.type == OctetType) {
+               strcpy(rbus->dirname, as_string(sym.val, sym.len));
+               printf(" dirname: %s\n", rbus->dirname);
+               sym_next(&sym);
+            }
+
+            // Read location
+            if(sym.type == IntegerType) {
+               rbus->location = as_uint(sym.val, sym.len);
+               printf(" location: %d\n", rbus->location);
+               sym_next(&sym);
+            }
+
+            // Read devices
+            struct usb_device vdev;
+            vdev.next = rbus->devices;
+            struct usb_device* dev = &vdev;
+            while(sym.type == SequenceType) {
+               sym_enter(&sym);
+               printf(" <device>\n");
+
+               // Initialize
+               if(dev->next == NULL) {
+                  printf(" <allocating new device>\n");
+                  dev->next = malloc(sizeof(struct usb_device));
+                  memset(dev->next, 0, sizeof(struct usb_device));
+                  dev->next->next = NULL;
+                  if(dev != &vdev)
+                     dev->next->prev = dev;
+                  if(rbus->devices == NULL)
+                     rbus->devices = dev->next;
+               }
+
+               dev = dev->next;
+
+               // Read filename
+               if(sym.type == OctetType) {
+                  strcpy(dev->filename, as_string(sym.val, sym.len));
+                  printf("  filename: %s\n", dev->filename);
+                  sym_next(&sym);
+               }
+
+               // Read description
+               if(sym.type == RawType) {
+                  memcpy(&dev->descriptor, sym.val, sym.len);
+                  printf("  description: .idVendor %x .idProduct %x\n", dev->descriptor.idVendor, dev->descriptor.idProduct);
+                  sym_next(&sym);
+               }
+
+               // Read devnum
+               if(sym.type == IntegerType) {
+                  dev->devnum = as_uint(sym.val, sym.len);
+                  printf("  number: %u\n", dev->devnum);
+                  sym_next(&sym);
+               }
+            }
+
+            // Free unused devices
+            while(dev->next != NULL) {
+               struct usb_device* ddev = dev->next;
+               printf(" <deallocating device %d>\n", ddev->devnum);
+               dev->next = ddev->next;
+               free(ddev);
+            }
+
+         }
+         else {
+            printf("<unexpected symbol 0x%02x>\n", sym.type);
+            sym_next(&sym);
+         }
+
+         // Next symbol
          if(sym.next == pkt_end(&pkt))
             break;
-
-         // Check symbol
-         if(sym.type & StructureType) {
-            printf("<entering structure 0x%02x>\n", sym.type);
-            sym_enter(&sym);
-         }
-         else
-            sym_next(&sym);
-
       }
+
+      // Deallocate unnecessary busses
+      while(rbus->next != NULL) {
+         printf("<deallocating bus %d>\n", rbus->next->location);
+         struct usb_bus* bus = rbus->next;
+         rbus->next = bus->next;
+         free(bus);
+      }
+
+      // Save busses
+      __remote_bus = vbus.next;
    }
 
-   // Call locally
-   return func() + res;
+   // Return remote result
+   printf("%s: returned %d\n", __func__, res);
+   return res;
 }
 
 struct usb_bus* usb_get_busses(void)
 {
    static struct usb_bus* (*func)(void) = NULL;
    READ_SYM(func, "usb_get_busses")
-   NOT_IMPLEMENTED
 
    // TODO: merge both Local/Remote bus in future
-
+   printf("%s: returned %p\n", __func__, __remote_bus);
    return __remote_bus;
 }
 

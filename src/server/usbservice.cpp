@@ -96,8 +96,18 @@ void UsbService::usb_find_devices(int fd, Packet& in)
       block.addString(bus->dirname);
       block.addUInt32(bus->location);
 
-      // TODO: only top-level devices
+      // TODO: only top-level devices supported
       for(struct usb_device* dev = bus->devices; dev; dev = dev->next) {
+
+         /* char filename[PATH_MAX + 1];
+            struct usb_device_descriptor descriptor;
+            u_int8_t devnum;
+         */
+         Block devBlock = block.writeBlock(SequenceType);
+         devBlock.addString(dev->filename);
+         devBlock.addData((const char*) &(dev->descriptor), sizeof(dev->descriptor));
+         devBlock.addUInt8(dev->devnum);
+         devBlock.finalize();
       }
 
       // Finalize block
