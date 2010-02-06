@@ -55,6 +55,7 @@ bool UsbService::handle(int fd, Packet& pkt)
       case UsbOpen:        usb_open(fd, pkt);         break;
       case UsbClose:       usb_close(fd, pkt);        break;
       case UsbControlMsg:  usb_control_msg(fd, pkt);  break;
+      case UsbClaimInterface: usb_claim_interface(fd, pkt); break;
       case UsbDetachKernelDriver: usb_detach_kernel_driver(fd, pkt); break;
       default:
          fprintf(stderr, "Call:  0x%02x unhandled call type (fd %d).\n", pkt.op(), fd);
@@ -164,54 +165,74 @@ void UsbService::usb_open(int fd, Packet& in)
    usb_dev_handle* udev = NULL;
    if(rdev != NULL) {
       udev = ::usb_open(rdev);
-
-      // Save device:bus for later matching
-      udev->device = rdev;
-      udev->bus = rdev->bus;
       mOpenList.push_back(udev);
       res = 0;
    }
 
+   printf("Call: usb_open(%u:%u) = %d (fd %d)\n", busid, devid, res, udev->fd);
+
    // Return result
    Packet pkt(UsbOpen);
    pkt.addInt8(res);
+   pkt.addInt32(udev->fd);
    pkt.send(fd);
-
-   printf("Call: usb_open(%u:%u) = %d\n", busid, devid, res);
 }
 
 void UsbService::usb_close(int fd, Packet& in)
 {
    Symbol sym(in);
-   int busid = sym.asInt();
-   sym.next();
-   int devid = sym.asInt();
+   int devfd = sym.asInt();
 
    // Find open device
    int res = -1;
    std::list<usb_dev_handle*>::iterator i;
    for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
       usb_dev_handle* h = *i;
-      if(h->bus->location == busid && h->device->devnum == devid) {
-         res = ::usb_close(h);
+      if(h->fd == devfd) {
          mOpenList.erase(i);
+         res = ::usb_close(h);
          break;
       }
    }
+
+   printf("Call: usb_close(%d) = %d\n", devfd, res);
 
    // Return result
    Packet pkt(UsbClose);
    pkt.addInt8(res);
    pkt.send(fd);
+}
 
-   printf("Call: usb_close(%u:%u) = %d\n", busid, devid, res);
+void UsbService::usb_claim_interface(int fd, Packet &in)
+{
+   Symbol sym(in);
+   int devfd = sym.asInt(); sym.next();
+   int index = sym.asInt();
+   int res = -1;
+
+   // Find open device
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      usb_dev_handle* h = *i;
+      if(h->fd == devfd) {
+         res = ::usb_claim_interface(h, index);
+         res = 0;
+         break;
+      }
+   }
+
+   printf("Call: usb_claim_interface(%d) = %d\n", devfd, res);
+
+   // Return result
+   Packet pkt(UsbClaimInterface);
+   pkt.addInt32((int32_t) res);
+   pkt.send(fd);
 }
 
 void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
 {
    Symbol sym(in);
-   int busid = sym.asInt(); sym.next();
-   int devid = sym.asInt(); sym.next();
+   int devfd = sym.asInt(); sym.next();
    int index = sym.asInt();
 
    // Find open device
@@ -219,13 +240,13 @@ void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
    std::list<usb_dev_handle*>::iterator i;
    for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
       usb_dev_handle* h = *i;
-      if(h->bus->location == busid && h->device->devnum == devid) {
+      if(h->fd == devfd) {
          res = ::usb_detach_kernel_driver_np(h, index);
          break;
       }
    }
 
-   printf("Call: usb_detach_kernel_driver_np(%u:%u, %d) = %d\n", busid, devid, index, res);
+   printf("Call: usb_detach_kernel_driver_np(%d, %d) = %d\n", devfd, index, res);
 
    // Return result
    Packet pkt(UsbDetachKernelDriver);
@@ -236,15 +257,14 @@ void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
 void UsbService::usb_control_msg(int fd, Packet& in)
 {
    Symbol sym(in);
-   int busid = sym.asInt(); sym.next();
-   int devid = sym.asInt(); sym.next();
+   int devfd = sym.asInt(); sym.next();
 
    // Find open device
    usb_dev_handle* h = NULL;
    std::list<usb_dev_handle*>::iterator i;
    for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
-      if((*i)->bus->location == busid &&
-         (*i)->device->devnum == devid) {
+      fprintf(stderr, "bus %p device %p\n", (*i)->bus, (*i)->device);
+      if((*i)->fd == devfd) {
          h = *i;
          break;
       }
@@ -265,7 +285,7 @@ void UsbService::usb_control_msg(int fd, Packet& in)
       int timeout = sym.asInt();
 
       res = ::usb_control_msg(h, reqtype, request, value, index, data, size, timeout);
-      printf("Call: usb_control_msg(%u:%u) = %d\n", busid, devid, res);
+      printf("Call: usb_control_msg(%d) = %d\n", devfd, res);
    }
 
    // Return packet

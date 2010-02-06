@@ -40,15 +40,16 @@ typedef enum {
    CallType       = StructureType|SequenceType,
 
    // Calls
-   NullRequest    = CallType,       // Ping
-   UsbInit        = CallType  +  1, // usb_init()
-   UsbFindBusses  = CallType  +  2, // usb_find_busses()
-   UsbFindDevices = CallType  +  3, // usb_find_devices()
-   UsbGetBusses   = CallType  +  4, // usb_bus* usb_get_busses()
-   UsbOpen        = CallType  +  5, // usb_dev_handle *usb_open(struct usb_device *dev)
-   UsbClose       = CallType  +  6, // int usb_close(usb_dev_handle *dev)
-   UsbControlMsg  = CallType  +  7,  // int usb_control_msg(usb_dev_handle *dev, ...)
-   UsbDetachKernelDriver = CallType + 8 // int usb_detach_kernel_driver()
+   NullRequest           = CallType,       // Ping
+   UsbInit               = CallType  +  1, // usb_init()
+   UsbFindBusses         = CallType  +  2, // usb_find_busses()
+   UsbFindDevices        = CallType  +  3, // usb_find_devices()
+   UsbGetBusses          = CallType  +  4, // usb_bus* usb_get_busses()
+   UsbOpen               = CallType  +  5, // usb_dev_handle *usb_open()
+   UsbClose              = CallType  +  6, // int usb_close()
+   UsbControlMsg         = CallType  +  7, // int usb_control_msg()
+   UsbClaimInterface     = CallType  +  8, // int usb_claim_interface()
+   UsbDetachKernelDriver = CallType  +  9  // int usb_detach_kernel_driver()
 
 } Type;
 

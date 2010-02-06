@@ -64,7 +64,7 @@ int pkt_send(int fd, const char* buf, int size)
 {
    // Send buffer
    int res = send(fd, buf, size, 0);
-   printf("%s(%d, size %d) = %d\n", __func__, fd, size, res);
+   //printf("%s(%d, size %d) = %d\n", __func__, fd, size, res);
    return res;
 }
 
