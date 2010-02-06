@@ -47,6 +47,7 @@ typedef enum {
    UsbGetBusses   = CallType  +  4, // usb_bus* usb_get_busses()
    UsbOpen        = CallType  +  5, // usb_dev_handle *usb_open(struct usb_device *dev)
    UsbClose       = CallType  +  6, // int usb_close(usb_dev_handle *dev)
+   UsbControlMsg  = CallType  +  7  // int usb_control_msg(usb_dev_handle *dev, ...)
 
 } Type;
 
@@ -159,7 +160,11 @@ void* sym_enter(sym_t* sym);
 
 /** Interpret symbol as unsigned integer.
   */
-int as_uint(void* data, uint32_t bytes);
+unsigned as_uint(void* data, uint32_t bytes);
+
+/** Interpres symbol as signed integer.
+  */
+int as_int(void* data, uint32_t bytes);
 
 /** Interpret symbol as string.
   */

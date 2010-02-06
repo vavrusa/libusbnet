@@ -33,6 +33,7 @@ packet_t* pkt_new(uint32_t size) {
    packet_t* pkt = malloc(sizeof(packet_t));
    pkt->buf = malloc(size * sizeof(char));
    pkt->bufsize = size;
+   pkt->size = 0;
    return pkt;
 }
 
@@ -152,7 +153,7 @@ int pkt_append(packet_t* pkt, Type type, uint16_t len, void* val)
       memcpy(dst + written, val, len);
       written += len;
    }
-   printf("Packet: appended type: 0x%x len: %d total: %d\n", type, len, written);
+   printf("Packet: appended type: 0x%x len: %d\n", type, len);
 
    // Update write pos and packet size
    pkt->size += written;
@@ -238,12 +239,25 @@ void* sym_enter(sym_t* sym)
    return sym_next(sym);
 }
 
-int as_uint(void* data, uint32_t bytes)
+unsigned as_uint(void* data, uint32_t bytes)
 {
    switch(bytes) {
    case 1: return *((uint8_t*) data); break;
    case 2: return *((uint16_t*) data); break;
    case 4: return *((uint32_t*) data); break;
+   default: break;
+   }
+
+   // Invalid number of bytes
+   return 0;
+}
+
+int as_int(void* data, uint32_t bytes)
+{
+   switch(bytes) {
+   case 1: return *((int8_t*) data); break;
+   case 2: return *((int16_t*) data); break;
+   case 4: return *((int32_t*) data); break;
    default: break;
    }
 

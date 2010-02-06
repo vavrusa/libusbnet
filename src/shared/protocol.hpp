@@ -102,6 +102,15 @@ class Block
    Block& addUInt32(uint32_t val) {
       return addNumeric(IntegerType, 4, val);
    }
+   Block& addInt8(int8_t val) {
+      return addNumeric(IntegerType, 1, val);
+   }
+   Block& addInt16(int16_t val) {
+      return addNumeric(IntegerType, 2, val);
+   }
+   Block& addInt32(int32_t val) {
+      return addNumeric(IntegerType, 4, val);
+   }
 
    protected:
    void setbuf(buffer_t& buf) {
@@ -139,12 +148,22 @@ class Symbol
       // Return symbol length
       uint32_t length() { return mLength; }
 
-      // Return value as integer, depending on length
+      // Return value as unsigned integer, depending on length
       unsigned asUInt()   {
          switch(mLength) {
             case 1: return asUInt8(); break;
             case 2: return asUInt16(); break;
             case 4: default: return asUInt32(); break;
+         }
+         return 0;
+      }
+
+      // Return value as integer, depending on length
+      int asInt()   {
+         switch(mLength) {
+            case 1: return asInt8(); break;
+            case 2: return asInt16(); break;
+            case 4: default: return asInt32(); break;
          }
          return 0;
       }
@@ -157,6 +176,15 @@ class Symbol
 
       // Return value as 32bit unsigned int
       uint32_t asUInt32() { return *((uint32_t*) mValue); }
+
+      // Return value as 8bit int
+      int8_t  asInt8() { return (int8_t) mValue[0]; }
+
+      // Return value as 16bit int
+      int16_t asInt16() { return *((int16_t*) mValue); }
+
+      // Return value as 32bit int
+      int32_t asInt32() { return *((int32_t*) mValue); }
 
       // Return value as string
       const char* asString() { return mValue; }
