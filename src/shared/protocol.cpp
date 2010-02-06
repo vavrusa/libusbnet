@@ -125,7 +125,6 @@ bool Symbol::next()
    setLength(sz);
 
    // Assign data
-   printf("Symbol: 0x%02x length %u\n", type(), length());
    mValue = ptr;
    ptr += sz;
    mPos += sz;
@@ -135,7 +134,6 @@ bool Symbol::next()
 bool Symbol::enter()
 {
    // Shift type
-   printf("<entering symbol>\n");
    ++mPos;
 
    // Shift length size
@@ -143,7 +141,6 @@ bool Symbol::enter()
    uint32_t sz;
    int szlen = unpack_size(ptr, &sz);
    mPos += szlen;
-   printf(" pos: %d size: %d\n", mPos, mBlock.size());
 
    // Load symbol
    return next();
