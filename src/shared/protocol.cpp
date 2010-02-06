@@ -43,12 +43,14 @@ Block& Block::pushPacked(uint32_t val)
 }
 
 Block& Block::append(const char* str, size_t size) {
-   if(size == 0)
-      size = strlen(str);
+   if(str != NULL) {
+      if(size == 0)
+         size = strlen(str);
 
-   mBuf.insert(mCursor, str, size);
-   mSize += size;
-   mCursor += size;
+      mBuf.insert(mCursor, str, size);
+      mSize += size;
+      mCursor += size;
+   }
    return *this;
 }
 
