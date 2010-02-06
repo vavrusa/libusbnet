@@ -89,7 +89,7 @@ uint32_t pkt_recv(int fd, packet_t* dst)
          return 0;
 
       dst->size += size;
-      printf("Packet: loaded payload.\n");
+      //printf("Packet: loaded payload.\n");
    }
 
    // DEBUG: dump
@@ -114,7 +114,7 @@ uint32_t recv_full(int fd, char* buf, uint32_t pending)
       pending -= rcvd;
       buf += rcvd;
       read += rcvd;
-      printf("Read: %d pending %u.\n", rcvd, pending);
+      //printf("Read: %d pending %u.\n", rcvd, pending);
    }
 
    return read;
@@ -123,7 +123,7 @@ uint32_t recv_full(int fd, char* buf, uint32_t pending)
 uint32_t pkt_recv_header(int fd, char *buf)
 {
    // Read packet header
-   printf("Receiving header.\n");
+   //printf("Receiving header.\n");
    uint32_t rcvd = 0;
    if((rcvd = recv_full(fd, buf, 2)) == 0)
       return 0;

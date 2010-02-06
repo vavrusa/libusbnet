@@ -20,11 +20,15 @@
 #ifndef __usbservice_hpp__
 #define __usbservice_hpp__
 #include "serversocket.hpp"
+#include "protocol.hpp"
+#include "usbnet.h"
+#include <list>
 
 class UsbService : public ServerSocket
 {
    public:
    UsbService(int fd = -1);
+   ~UsbService();
 
    /** Reimplemented packet handling.
      */
@@ -36,6 +40,13 @@ class UsbService : public ServerSocket
    void usb_init(int fd, Packet& in);
    void usb_find_busses(int fd, Packet& in);
    void usb_find_devices(int fd, Packet& in);
+
+   void usb_open(int fd, Packet& in);
+   void usb_close(int fd, Packet& in);
+
+   private:
+   /* libusb data storage */
+   std::list<usb_dev_handle*> mOpenList;
 };
 
 #endif // __usbservice_hpp__

@@ -86,7 +86,6 @@ void ServerSocket::run()
                   }
                }
                else {
-                  cout << "Incoming data (fd " << it->fd << ").\n";
                   if(!read(it->fd))
                      it->revents |= POLLHUP;
                }

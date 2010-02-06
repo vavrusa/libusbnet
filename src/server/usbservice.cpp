@@ -18,9 +18,7 @@
  ***************************************************************************/
 
 #include "usbservice.hpp"
-#include "protocol.hpp"
 #include <netinet/tcp.h>
-#include <usb.h>
 #include <cstdio>
 
 UsbService::UsbService(int fd)
@@ -29,6 +27,17 @@ UsbService::UsbService(int fd)
    // Disable TCP buffering
    int flag = 1;
    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
+}
+
+UsbService::~UsbService()
+{
+   // Close open devices
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      printf("UsbService: closing open device %p.", *i);
+      ::usb_close(*i);
+   }
+   mOpenList.clear();
 }
 
 bool UsbService::handle(int fd, Packet& pkt)
@@ -43,6 +52,8 @@ bool UsbService::handle(int fd, Packet& pkt)
       case UsbInit:        usb_init(fd, pkt);         break;
       case UsbFindBusses:  usb_find_busses(fd, pkt);  break;
       case UsbFindDevices: usb_find_devices(fd, pkt); break;
+      case UsbOpen:        usb_open(fd, pkt);         break;
+      case UsbClose:       usb_close(fd, pkt);        break;
       default:
          fprintf(stderr, "Call:  0x%02x unhandled call type (fd %d).\n", pkt.op(), fd);
          return false;
@@ -116,4 +127,71 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 
    // Send result
    pkt.send(fd);
+}
+
+void UsbService::usb_open(int fd, Packet& in)
+{
+   Symbol sym(in);
+   unsigned busid = sym.asUInt();
+   sym.next();
+   unsigned devid = sym.asUInt();
+
+   // Find device
+   struct usb_device* rdev = NULL;
+   for(struct usb_bus* bus = ::usb_get_busses(); bus; bus = bus->next) {
+
+      // Find bus
+      if(bus->location == busid) {
+         for(struct usb_device* dev = bus->devices; dev; dev = dev->next) {
+
+            // Find device
+            if(dev->devnum == devid) {
+               rdev = dev;
+               break;
+            }
+         }
+         break;
+      }
+   }
+
+   // Open device
+   usb_dev_handle* udev = NULL;
+   if(rdev != NULL) {
+      udev = ::usb_open(rdev);
+      mOpenList.push_back(udev);
+   }
+
+   // Return result
+   Packet pkt(UsbOpen);
+   pkt.addUInt8(udev != NULL);
+   pkt.send(fd);
+
+   printf("Call: usb_open(%u:%u) = %u\n", busid, devid, udev != NULL);
+}
+
+void UsbService::usb_close(int fd, Packet& in)
+{
+   Symbol sym(in);
+   unsigned busid = sym.asUInt();
+   sym.next();
+   unsigned devid = sym.asUInt();
+
+   // Find open device
+   int res = -1;
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      usb_dev_handle* h = *i;
+      if(h->bus->location == busid && h->device->devnum == devid) {
+         res = ::usb_close(h);
+         mOpenList.erase(i);
+         break;
+      }
+   }
+
+   // Return result
+   Packet pkt(UsbClose);
+   pkt.addUInt8(res == 0);
+   pkt.send(fd);
+
+   printf("Call: usb_close(%u:%u) = %u\n", busid, devid, res == 0);
 }

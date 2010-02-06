@@ -22,4 +22,21 @@
 // Include original libusb header
 #include <usb.h>
 
+/* @from: libusb/usbi.h:41
+   WARNING: Matches libusb-0.1.12, may loss binary compatibility.
+ */
+struct usb_dev_handle {
+   int fd;
+
+   struct usb_bus *bus;
+   struct usb_device *device;
+
+   int config;
+   int interface;
+   int altsetting;
+
+   /* Added by RMT so implementations can store other per-open-device data */
+   void *impl_info;
+};
+
 #endif // __usbnet_h__

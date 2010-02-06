@@ -45,6 +45,8 @@ typedef enum {
    UsbFindBusses  = CallType  +  2, // usb_find_busses()
    UsbFindDevices = CallType  +  3, // usb_find_devices()
    UsbGetBusses   = CallType  +  4, // usb_bus* usb_get_busses()
+   UsbOpen        = CallType  +  5, // usb_dev_handle *usb_open(struct usb_device *dev)
+   UsbClose       = CallType  +  6, // int usb_close(usb_dev_handle *dev)
 
 } Type;
 

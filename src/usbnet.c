@@ -195,7 +195,7 @@ int usb_find_devices(void)
                   printf(" <allocating new device>\n");
                   dev->next = malloc(sizeof(struct usb_device));
                   memset(dev->next, 0, sizeof(struct usb_device));
-                  dev->next->next = NULL;
+                  dev->next->bus = rbus;
                   if(dev != &vdev)
                      dev->next->prev = dev;
                   if(rbus->devices == NULL)
@@ -270,5 +270,75 @@ struct usb_bus* usb_get_busses(void)
    // TODO: merge both Local/Remote bus in future
    printf("%s: returned %p\n", __func__, __remote_bus);
    return __remote_bus;
+}
+
+usb_dev_handle *usb_open(struct usb_device *dev)
+{
+   // Get remote fd
+   int fd = get_remote();
+
+   // Send packet
+   char buf[255];
+   packet_t pkt = pkt_create(buf, 255);
+   pkt_init(&pkt, UsbOpen);
+   pkt_append(&pkt, IntegerType, sizeof(dev->bus->location), &dev->bus->location);
+   pkt_append(&pkt, IntegerType, sizeof(dev->devnum),        &dev->devnum);
+   pkt_send(fd, pkt.buf, pkt_size(&pkt));
+   printf("%s: %u:%u\n", __func__, dev->bus->location, dev->devnum);
+
+   // Get response
+   int res = -1;
+   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbOpen) {
+      sym_t sym;
+      pkt_begin(&pkt, &sym);
+      if(sym.type == IntegerType) {
+         res = as_uint(sym.val, sym.len);
+      }
+   }
+
+   // Evaluate
+   printf("%s: returned %d\n", __func__, res);
+   if(res == 0)
+      return NULL;
+
+   usb_dev_handle* udev = malloc(sizeof(usb_dev_handle));
+   udev->fd = -1;
+   udev->device = dev;
+   udev->bus = dev->bus;
+   udev->config = udev->interface = udev->altsetting = -1;
+
+   return udev;
+}
+
+int usb_close(usb_dev_handle *dev)
+{
+   // Get remote fd
+   int fd = get_remote();
+
+   // Send packet
+   char buf[255];
+   packet_t pkt = pkt_create(buf, 255);
+   pkt_init(&pkt, UsbClose);
+   pkt_append(&pkt, IntegerType, sizeof(dev->bus->location),  &dev->bus->location);
+   pkt_append(&pkt, IntegerType, sizeof(dev->device->devnum), &dev->device->devnum);
+   pkt_send(fd, pkt.buf, pkt_size(&pkt));
+   printf("%s: %u:%u\n", __func__, dev->bus->location, dev->device->devnum);
+
+   // Free device
+   free(dev);
+
+   // Get response
+   unsigned res = 0;
+   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbClose) {
+      sym_t sym;
+      pkt_begin(&pkt, &sym);
+      if(sym.type == IntegerType) {
+         res = as_uint(sym.val, sym.len);
+      }
+   }
+
+   printf("%s: returned %d\n", __func__, res == 0 ? -1 : 0);
+
+   return res == 0 ? -1 : 0;
 }
 
