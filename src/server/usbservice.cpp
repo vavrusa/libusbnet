@@ -54,6 +54,7 @@ bool UsbService::handle(int fd, Packet& pkt)
       case UsbFindDevices: usb_find_devices(fd, pkt); break;
       case UsbOpen:        usb_open(fd, pkt);         break;
       case UsbClose:       usb_close(fd, pkt);        break;
+      case UsbControlMsg:  usb_control_msg(fd, pkt);  break;
       default:
          fprintf(stderr, "Call:  0x%02x unhandled call type (fd %d).\n", pkt.op(), fd);
          return false;
@@ -132,9 +133,9 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 void UsbService::usb_open(int fd, Packet& in)
 {
    Symbol sym(in);
-   unsigned busid = sym.asUInt();
+   int busid = sym.asInt();
    sym.next();
-   unsigned devid = sym.asUInt();
+   int devid = sym.asInt();
 
    // Find device
    struct usb_device* rdev = NULL;
@@ -142,39 +143,48 @@ void UsbService::usb_open(int fd, Packet& in)
 
       // Find bus
       if(bus->location == busid) {
+
+         // Find device
          for(struct usb_device* dev = bus->devices; dev; dev = dev->next) {
 
-            // Find device
+            // Device match
             if(dev->devnum == devid) {
                rdev = dev;
                break;
             }
          }
+
          break;
       }
    }
 
    // Open device
+   int res = -1;
    usb_dev_handle* udev = NULL;
    if(rdev != NULL) {
       udev = ::usb_open(rdev);
+
+      // Save device:bus for later matching
+      udev->device = rdev;
+      udev->bus = rdev->bus;
       mOpenList.push_back(udev);
+      res = 0;
    }
 
    // Return result
    Packet pkt(UsbOpen);
-   pkt.addUInt8(udev != NULL);
+   pkt.addInt8(res);
    pkt.send(fd);
 
-   printf("Call: usb_open(%u:%u) = %u\n", busid, devid, udev != NULL);
+   printf("Call: usb_open(%u:%u) = %d\n", busid, devid, res);
 }
 
 void UsbService::usb_close(int fd, Packet& in)
 {
    Symbol sym(in);
-   unsigned busid = sym.asUInt();
+   int busid = sym.asInt();
    sym.next();
-   unsigned devid = sym.asUInt();
+   int devid = sym.asInt();
 
    // Find open device
    int res = -1;
@@ -190,8 +200,54 @@ void UsbService::usb_close(int fd, Packet& in)
 
    // Return result
    Packet pkt(UsbClose);
-   pkt.addUInt8(res == 0);
+   pkt.addInt8(res);
    pkt.send(fd);
 
-   printf("Call: usb_close(%u:%u) = %u\n", busid, devid, res == 0);
+   printf("Call: usb_close(%u:%u) = %d\n", busid, devid, res);
 }
+
+void UsbService::usb_control_msg(int fd, Packet& in)
+{
+   Symbol sym(in);
+   int busid = sym.asInt();
+   sym.next();
+   int devid = sym.asInt();
+   sym.next();
+
+   // Find open device
+   usb_dev_handle* h = NULL;
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      if((*i)->bus->location == busid &&
+         (*i)->device->devnum == devid) {
+         h = *i;
+         break;
+      }
+   }
+
+   // Device not found
+   int res = -1;
+   char* data = NULL;
+   if(h != NULL) {
+
+      // Call function
+      int reqtype = sym.asInt(); sym.next();
+      int request = sym.asInt(); sym.next();
+      int value   = sym.asInt(); sym.next();
+      int index   = sym.asInt(); sym.next();
+      int size    = sym.length();
+      data  = (char*) sym.asString(); sym.next();
+      int timeout = sym.asInt();
+
+      printf("Call: usb_control_msg(%u:%u) len %d\n", busid, devid, size);
+      res = ::usb_control_msg(h, reqtype, request, value, index, data, size, timeout);
+      printf("Call: usb_control_msg(%u:%u) = %d\n", busid, devid, res);
+   }
+
+   // Return packet
+   Packet pkt(UsbControlMsg);
+   pkt.addInt32(res);
+   pkt.addData(data, (res < 0) ? 0 : res, OctetType);
+   pkt.send(fd);
+}
+

@@ -36,13 +36,20 @@ class UsbService : public ServerSocket
 
    protected:
 
-   /* libusb implementations. */
+   /* libusb implementations.
+    */
+
+   /* (1) Core functions. */
    void usb_init(int fd, Packet& in);
    void usb_find_busses(int fd, Packet& in);
    void usb_find_devices(int fd, Packet& in);
 
+   /* (2) Device controls. */
    void usb_open(int fd, Packet& in);
    void usb_close(int fd, Packet& in);
+
+   /* (3) Control transfers. */
+   void usb_control_msg(int fd, Packet& in);
 
    private:
    /* libusb data storage */
