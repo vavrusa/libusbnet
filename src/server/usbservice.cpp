@@ -55,6 +55,7 @@ bool UsbService::handle(int fd, Packet& pkt)
       case UsbOpen:        usb_open(fd, pkt);         break;
       case UsbClose:       usb_close(fd, pkt);        break;
       case UsbControlMsg:  usb_control_msg(fd, pkt);  break;
+      case UsbDetachKernelDriver: usb_detach_kernel_driver(fd, pkt); break;
       default:
          fprintf(stderr, "Call:  0x%02x unhandled call type (fd %d).\n", pkt.op(), fd);
          return false;
@@ -206,13 +207,37 @@ void UsbService::usb_close(int fd, Packet& in)
    printf("Call: usb_close(%u:%u) = %d\n", busid, devid, res);
 }
 
+void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
+{
+   Symbol sym(in);
+   int busid = sym.asInt(); sym.next();
+   int devid = sym.asInt(); sym.next();
+   int index = sym.asInt();
+
+   // Find open device
+   int res = -1;
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      usb_dev_handle* h = *i;
+      if(h->bus->location == busid && h->device->devnum == devid) {
+         res = ::usb_detach_kernel_driver_np(h, index);
+         break;
+      }
+   }
+
+   printf("Call: usb_detach_kernel_driver_np(%u:%u, %d) = %d\n", busid, devid, index, res);
+
+   // Return result
+   Packet pkt(UsbDetachKernelDriver);
+   pkt.addInt32((int32_t) res);
+   pkt.send(fd);
+}
+
 void UsbService::usb_control_msg(int fd, Packet& in)
 {
    Symbol sym(in);
-   int busid = sym.asInt();
-   sym.next();
-   int devid = sym.asInt();
-   sym.next();
+   int busid = sym.asInt(); sym.next();
+   int devid = sym.asInt(); sym.next();
 
    // Find open device
    usb_dev_handle* h = NULL;
@@ -239,7 +264,6 @@ void UsbService::usb_control_msg(int fd, Packet& in)
       data  = (char*) sym.asString(); sym.next();
       int timeout = sym.asInt();
 
-      printf("Call: usb_control_msg(%u:%u) len %d\n", busid, devid, size);
       res = ::usb_control_msg(h, reqtype, request, value, index, data, size, timeout);
       printf("Call: usb_control_msg(%u:%u) = %d\n", busid, devid, res);
    }

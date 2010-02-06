@@ -47,6 +47,7 @@ class UsbService : public ServerSocket
    /* (2) Device controls. */
    void usb_open(int fd, Packet& in);
    void usb_close(int fd, Packet& in);
+   void usb_detach_kernel_driver(int fd, Packet& in);
 
    /* (3) Control transfers. */
    void usb_control_msg(int fd, Packet& in);

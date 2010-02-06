@@ -355,6 +355,37 @@ int usb_close(usb_dev_handle *dev)
    return res;
 }
 
+int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
+{
+   // Get remote fd
+   int fd = get_remote();
+
+   // Send packet
+   char buf[255];
+   packet_t pkt = pkt_create(buf, 255);
+   pkt_init(&pkt, UsbDetachKernelDriver);
+   pkt_append(&pkt, IntegerType, sizeof(dev->bus->location),  &dev->bus->location);
+   pkt_append(&pkt, IntegerType, sizeof(dev->device->devnum), &dev->device->devnum);
+   pkt_append(&pkt, IntegerType, sizeof(int),                 &interface);
+   pkt_send(fd, pkt.buf, pkt_size(&pkt));
+   printf("%s: %u:%u\n", __func__, dev->bus->location, dev->device->devnum);
+
+   // Get response
+   int res = -1;
+   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbDetachKernelDriver) {
+      sym_t sym;
+      pkt_begin(&pkt, &sym);
+      if(sym.type == IntegerType) {
+         res = as_int(sym.val, sym.len);
+      }
+   }
+
+   printf("%s: returned %d\n", __func__, res);
+
+   return res;
+
+}
+
 /* libusb(3):
  * Control transfers.
  */
