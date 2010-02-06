@@ -35,7 +35,7 @@ class Block
    Block(buffer_t& sharedbuf, int pos = -1);
 
    /** Return block size. */
-   size_t size() {
+   virtual size_t size() {
       return mSize;
    }
 
@@ -47,6 +47,11 @@ class Block
    /** Return block cursor position. */
    int currentPos() {
       return mCursor;
+   }
+
+   /** Return block data. */
+   const char* data() {
+      return mBuf.data() + mPos;
    }
 
    /** Push raw byte. */
@@ -106,6 +111,67 @@ class Block
    private:
       buffer_t& mBuf;
       int mPos, mCursor, mSize;
+};
+
+
+/** Class represents single value in BER encoding.
+    Contains information about Type, Length and Value with
+    conversion methods.
+  */
+class Symbol
+{
+   public:
+      Symbol(Block& block)
+         : mType(InvalidType), mLength(0), mValue(0), mBlock(block), mPos(0)
+      {
+         enter();
+      }
+
+      // Next
+      bool next();
+
+      // Enter
+      bool enter();
+
+      // Return symbol type
+      uint8_t type() { return mType; }
+
+      // Return symbol length
+      uint32_t length() { return mLength; }
+
+      // Return value as integer, depending on length
+      unsigned asUInt()   {
+         switch(mLength) {
+            case 1: return asUInt8(); break;
+            case 2: return asUInt16(); break;
+            case 4: default: return asUInt32(); break;
+         }
+         return 0;
+      }
+
+      // Return value as 8bit unsigned int
+      uint8_t  asUInt8() { return (uint8_t) mValue[0]; }
+
+      // Return value as 16bit unsigned int
+      uint16_t asUInt16() { return *((uint16_t*) mValue); }
+
+      // Return value as 32bit unsigned int
+      uint32_t asUInt32() { return *((uint32_t*) mValue); }
+
+      // Return value as string
+      const char* asString() { return mValue; }
+
+   protected:
+      uint8_t setType(uint8_t val) { return mType = val; }
+      uint32_t setLength(uint32_t val) { return mLength = val; }
+      void setValue(const char* val) { mValue = val; }
+
+   private:
+      uint8_t  mType;
+      uint32_t mLength;
+      const char* mValue;
+      Block& mBlock;
+      int mPos;
 };
 
 

@@ -19,6 +19,7 @@
 
 #include "protocol.hpp"
 #include <cstring>
+#include <cstdio>
 #include <iostream>
 #include <iomanip>
 
@@ -105,6 +106,49 @@ Block& Block::finalize()
    return *this;
 }
 
+bool Symbol::next()
+{
+   if(mPos >= mBlock.size())
+      return false;
+
+   // Load type
+   const char* ptr = mBlock.data() + mPos;
+   setType((uint8_t) *ptr);
+   ++ptr;
+   ++mPos;
+
+   // Unpack size
+   uint32_t sz;
+   int szlen = unpack_size(ptr, &sz);
+   ptr += szlen;
+   mPos += szlen;
+   setLength(sz);
+
+   // Assign data
+   printf("Symbol: 0x%02x length %u\n", type(), length());
+   mValue = ptr;
+   ptr += sz;
+   mPos += sz;
+   return true;
+}
+
+bool Symbol::enter()
+{
+   // Shift type
+   printf("<entering symbol>\n");
+   ++mPos;
+
+   // Shift length size
+   const char* ptr = mBlock.data() + mPos;
+   uint32_t sz;
+   int szlen = unpack_size(ptr, &sz);
+   mPos += szlen;
+   printf(" pos: %d size: %d\n", mPos, mBlock.size());
+
+   // Load symbol
+   return next();
+}
+
 int Packet::recv(int fd)
 {
    // Prepare buffer
@@ -116,7 +160,6 @@ int Packet::recv(int fd)
    // Unpack payload length
    uint32_t pending = 0;
    int len = unpack_size(mBuf.data() + 1, &pending);
-   std::cerr << "New size: " << hsize << " + " << pending << " len: " << len << "\n";
    mBuf.resize(hsize + pending);
 
    char* ptr = (char*) mBuf.data() + 1 + len;
