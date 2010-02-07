@@ -33,12 +33,10 @@
 static pthread_mutex_t __mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void call_lock() {
-   printf("Call: locked\n");
    pthread_mutex_lock(&__mutex);
 }
 
 static void call_release() {
-   printf("Call: unlocked\n");
    pthread_mutex_unlock(&__mutex);
 }
 
@@ -93,9 +91,6 @@ static int get_remote() {
 
 void usb_init(void)
 {
-   static void (*func)(void) = NULL;
-   READ_SYM(func, "usb_init")
-
    // Initialize remote fd
    call_lock();
    int fd = get_remote();
@@ -106,14 +101,12 @@ void usb_init(void)
    pkt_init(&pkt, UsbInit);
    pkt_send(fd, pkt.buf, pkt_size(&pkt));
    call_release();
+   printf("%s: called\n", __func__);
 }
 
 int usb_find_busses(void)
 {
-   static int (*func)(void) = NULL;
-   READ_SYM(func, "usb_find_busses")
-
-   // Get remote fd
+  // Get remote fd
    call_lock();
    int fd = get_remote();
 
@@ -131,20 +124,17 @@ int usb_find_busses(void)
       if(sym.cur != pkt_end(&pkt)) {
          if(sym.type == IntegerType)
             res = as_uint(sym.val, sym.len);
-
-         printf("%s: returned %d\n", __func__, res);
       }
    }
 
    // Return remote result
    call_release();
+   printf("%s: returned %d\n", __func__, res);
    return res;
 }
 
 int usb_find_devices(void)
 {
-   static int (*func)(void) = NULL;
-   READ_SYM(func, "usb_find_devices")
    NOT_IMPLEMENTED
 
    // Get remote fd
@@ -178,21 +168,20 @@ int usb_find_devices(void)
       for(;;) {
 
          // Evaluate
-         printf("sym 0x%02x len %d\n", sym.type, sym.len);
          if(sym.type == StructureType) {
-            printf("<entering struct>\n");
             sym_enter(&sym);
 
             // Allocate bus
+            uint8_t is_new = 0;
             if(rbus->next == NULL) {
 
                // Allocate next item
-               printf("<allocating new bus>\n");
                struct usb_bus* nbus = malloc(sizeof(struct usb_bus));
                memset(nbus, 0, sizeof(struct usb_bus));
                rbus->next = nbus;
                nbus->prev = rbus;
                rbus = nbus;
+               is_new = 1;
             }
             else
                rbus = rbus->next;
@@ -200,14 +189,15 @@ int usb_find_devices(void)
             // Read dirname
             if(sym.type == OctetType) {
                strcpy(rbus->dirname, as_string(sym.val, sym.len));
-               printf(" dirname: %s\n", rbus->dirname);
                sym_next(&sym);
             }
 
             // Read location
             if(sym.type == IntegerType) {
-               rbus->location = as_uint(sym.val, sym.len);
-               printf(" location: %d\n", rbus->location);
+               rbus->location = as_int(sym.val, sym.len);
+               if(is_new) {
+                  printf("%s: new bus id: %03d\n", __func__, rbus->location);
+               }
                sym_next(&sym);
             }
 
@@ -217,11 +207,10 @@ int usb_find_devices(void)
             struct usb_device* dev = &vdev;
             while(sym.type == SequenceType) {
                sym_enter(&sym);
-               printf(" <device>\n");
 
                // Initialize
+               uint8_t is_new = 0;
                if(dev->next == NULL) {
-                  printf(" <allocating new device>\n");
                   dev->next = malloc(sizeof(struct usb_device));
                   memset(dev->next, 0, sizeof(struct usb_device));
                   dev->next->bus = rbus;
@@ -229,6 +218,7 @@ int usb_find_devices(void)
                      dev->next->prev = dev;
                   if(rbus->devices == NULL)
                      rbus->devices = dev->next;
+                  is_new = 1;
                }
 
                dev = dev->next;
@@ -236,21 +226,22 @@ int usb_find_devices(void)
                // Read filename
                if(sym.type == OctetType) {
                   strcpy(dev->filename, as_string(sym.val, sym.len));
-                  printf("  filename: %s\n", dev->filename);
                   sym_next(&sym);
                }
 
                // Read description
                if(sym.type == RawType) {
                   memcpy(&dev->descriptor, sym.val, sym.len);
-                  printf("  description: .idVendor %x .idProduct %x\n", dev->descriptor.idVendor, dev->descriptor.idProduct);
                   sym_next(&sym);
                }
 
                // Read devnum
                if(sym.type == IntegerType) {
-                  dev->devnum = as_uint(sym.val, sym.len);
-                  printf("  number: %u\n", dev->devnum);
+                  dev->devnum = as_int(sym.val, sym.len);
+                  if(is_new) {
+                     printf("%s: new device id: %03d vendor_id: %04x product_id: %04x\n",
+                            __func__, dev->devnum, dev->descriptor.idVendor, dev->descriptor.idProduct);
+                  }
                   sym_next(&sym);
                }
             }
@@ -258,14 +249,14 @@ int usb_find_devices(void)
             // Free unused devices
             while(dev->next != NULL) {
                struct usb_device* ddev = dev->next;
-               printf(" <deallocating device %d>\n", ddev->devnum);
+               printf("%s: deleting device id: %03d\n", __func__, ddev->devnum);
                dev->next = ddev->next;
                free(ddev);
             }
 
          }
          else {
-            printf("<unexpected symbol 0x%02x>\n", sym.type);
+            printf("%s: unexpected symbol 0x%02x\n", __func__, sym.type);
             sym_next(&sym);
          }
 
@@ -276,7 +267,7 @@ int usb_find_devices(void)
 
       // Deallocate unnecessary busses
       while(rbus->next != NULL) {
-         printf("<deallocating bus %d>\n", rbus->next->location);
+         printf("%s: deleting bus %03d\n", __func__, rbus->next->location);
          struct usb_bus* bus = rbus->next;
          rbus->next = bus->next;
          free(bus);
@@ -287,16 +278,13 @@ int usb_find_devices(void)
    }
 
    // Return remote result
-   printf("%s: returned %d\n", __func__, res);
    call_release();
+   printf("%s: returned %d\n", __func__, res);
    return res;
 }
 
 struct usb_bus* usb_get_busses(void)
 {
-   static struct usb_bus* (*func)(void) = NULL;
-   READ_SYM(func, "usb_get_busses")
-
    // TODO: merge both Local/Remote bus in future
    printf("%s: returned %p\n", __func__, __remote_bus);
    return __remote_bus;
@@ -319,7 +307,6 @@ usb_dev_handle *usb_open(struct usb_device *dev)
    pkt_append(&pkt, IntegerType, sizeof(dev->bus->location), &dev->bus->location);
    pkt_append(&pkt, IntegerType, sizeof(dev->devnum),        &dev->devnum);
    pkt_send(fd, pkt.buf, pkt_size(&pkt));
-   printf("%s: %u:%u\n", __func__, dev->bus->location, dev->devnum);
 
    // Get response
    int res = -1, devfd = -1;
@@ -336,17 +323,17 @@ usb_dev_handle *usb_open(struct usb_device *dev)
    }
 
    // Evaluate
+   usb_dev_handle* udev = NULL;
+   if(res >= 0) {
+      udev = malloc(sizeof(usb_dev_handle));
+      udev->fd = devfd;
+      udev->device = dev;
+      udev->bus = dev->bus;
+      udev->config = udev->interface = udev->altsetting = -1;
+   }
+
    call_release();
    printf("%s: returned %d (on fd %d)\n", __func__, res, devfd);
-   if(res < 0)
-      return NULL;
-
-   usb_dev_handle* udev = malloc(sizeof(usb_dev_handle));
-   udev->fd = devfd;
-   udev->device = dev;
-   udev->bus = dev->bus;
-   udev->config = udev->interface = udev->altsetting = -1;
-
    return udev;
 }
 
@@ -376,8 +363,8 @@ int usb_close(usb_dev_handle *dev)
       }
    }
 
-   printf("%s: returned %d\n", __func__, res);
    call_release();
+   printf("%s: returned %d\n", __func__, res);
    return res;
 }
 
@@ -405,8 +392,8 @@ int usb_claim_interface(usb_dev_handle *dev, int interface)
       }
    }
 
-   printf("%s: returned %d\n", __func__, res);
    call_release();
+   printf("%s: returned %d\n", __func__, res);
    return res;
 }
 
@@ -434,8 +421,8 @@ int usb_release_interface(usb_dev_handle *dev, int interface)
       }
    }
 
-   printf("%s: returned %d\n", __func__, res);
    call_release();
+   printf("%s: returned %d\n", __func__, res);
    return res;
 }
 
@@ -463,8 +450,8 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
       }
    }
 
-   printf("%s: returned %d\n", __func__, res);
    call_release();
+   printf("%s: returned %d\n", __func__, res);
    return res;
 
 }
@@ -511,8 +498,8 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
 
    // Return response
    pkt_del(pkt);
-   printf("%s: returned %d\n", __func__, res);
    call_release();
+   printf("%s: returned %d\n", __func__, res);
    return res;
 }
 
@@ -534,11 +521,12 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
    pkt_append(pkt, IntegerType, sizeof(int), &size);
    pkt_append(pkt, IntegerType, sizeof(int), &timeout);
    pkt_send(fd, pkt->buf, pkt_size(pkt));
-   printf("%s: query 0x%02x ep %d size %d returned 0x%02x\n", __func__, UsbBulkRead, ep, size);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbBulkRead) {
+   unsigned char op = 0x00;
+   if(pkt_recv(fd, pkt) > 0) {
+      op = pkt->buf[0];
       sym_t sym;
       pkt_begin(pkt, &sym);
       if(sym.type == IntegerType) {
@@ -555,8 +543,8 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
 
    // Return response
    pkt_del(pkt);
-   printf("%s: returned %d (op 0x%02x)\n", __func__, res, pkt->buf[0]);
    call_release();
+   printf("%s: returned %d (op 0x%02x)\n", __func__, res, op);
    return res;
 }
 
@@ -574,7 +562,6 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
    pkt_append(pkt, OctetType,   size,        bytes);
    pkt_append(pkt, IntegerType, sizeof(int), &timeout);
    pkt_send(fd, pkt->buf, pkt_size(pkt));
-   printf("%s: query ep %d size %d\n", __func__, ep, size);
 
    // Get response
    int res = -1;
@@ -589,8 +576,8 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
 
    // Return response
    pkt_del(pkt);
-   printf("%s: returned %d\n", __func__, res);
    call_release();
+   printf("%s: returned %d\n", __func__, res);
    return res;
 }
 

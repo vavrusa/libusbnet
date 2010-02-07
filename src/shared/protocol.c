@@ -95,7 +95,7 @@ uint32_t pkt_recv(int fd, packet_t* dst)
 
    // DEBUG: dump
    #ifdef DEBUG
-   pkt_dump(dst->buf, dst->size);
+   //pkt_dump(dst->buf, dst->size);
    #endif
 
    // Return packet size
@@ -153,7 +153,6 @@ int pkt_append(packet_t* pkt, Type type, uint16_t len, void* val)
       memcpy(dst + written, val, len);
       written += len;
    }
-   printf("Packet: appended type: 0x%x len: %d\n", type, len);
 
    // Update write pos and packet size
    pkt->size += written;
