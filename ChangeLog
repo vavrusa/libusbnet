@@ -1,3 +1,6 @@
+0.2 - Protocol C and C++ API (ASN.1/BER subset)
+    - Wrapped core functions and bulk transfers
+    - Global call locking
 0.1
     - Initial wrapped functions
     - Debug interface
