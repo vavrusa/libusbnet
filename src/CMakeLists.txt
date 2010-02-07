@@ -14,6 +14,9 @@ set(headers   usbnet.h
               ${SHARED_DIR}/protocol.h
               )
 
+# Find pthreads
+find_package(Threads REQUIRED)
+
 add_library(usbnet SHARED ${sources} ${headers})
 
 # Static library
@@ -29,6 +32,7 @@ add_subdirectory(client)
 add_subdirectory(server)
 
 # Dependencies
+target_link_libraries(usbnet ${CMAKE_THREAD_LIBS_INIT})
 #target_link_libraries(usbnet ${LIBUSB_LIBRARIES})
 
 # Install

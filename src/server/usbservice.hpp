@@ -48,10 +48,15 @@ class UsbService : public ServerSocket
    void usb_open(int fd, Packet& in);
    void usb_close(int fd, Packet& in);
    void usb_claim_interface(int fd, Packet& in);
+   void usb_release_interface(int fd, Packet& in);
    void usb_detach_kernel_driver(int fd, Packet& in);
 
    /* (3) Control transfers. */
    void usb_control_msg(int fd, Packet& in);
+
+   /* (4) Bulk transfers. */
+   void usb_bulk_read(int fd, Packet& in);
+   void usb_bulk_write(int fd, Packet& in);
 
    private:
    /* libusb data storage */

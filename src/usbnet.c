@@ -23,9 +23,24 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/shm.h>
+#include <pthread.h>
 #include "usbnet.h"
 #include "common.h"
 #include "protocol.h"
+
+// Global call lock
+// TODO: make more efficient call exclusion
+static pthread_mutex_t __mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void call_lock() {
+   printf("Call: locked\n");
+   pthread_mutex_lock(&__mutex);
+}
+
+static void call_release() {
+   printf("Call: unlocked\n");
+   pthread_mutex_unlock(&__mutex);
+}
 
 // Remote socket filedescriptor
 static int __remote_fd = -1;
@@ -82,6 +97,7 @@ void usb_init(void)
    READ_SYM(func, "usb_init")
 
    // Initialize remote fd
+   call_lock();
    int fd = get_remote();
 
    // Create buffer
@@ -89,6 +105,7 @@ void usb_init(void)
    packet_t pkt = pkt_create(buf, PACKET_MINSIZE);
    pkt_init(&pkt, UsbInit);
    pkt_send(fd, pkt.buf, pkt_size(&pkt));
+   call_release();
 }
 
 int usb_find_busses(void)
@@ -97,6 +114,7 @@ int usb_find_busses(void)
    READ_SYM(func, "usb_find_busses")
 
    // Get remote fd
+   call_lock();
    int fd = get_remote();
 
    // Create buffer
@@ -119,6 +137,7 @@ int usb_find_busses(void)
    }
 
    // Return remote result
+   call_release();
    return res;
 }
 
@@ -129,6 +148,7 @@ int usb_find_devices(void)
    NOT_IMPLEMENTED
 
    // Get remote fd
+   call_lock();
    int fd = get_remote();
 
    // Create buffer
@@ -268,6 +288,7 @@ int usb_find_devices(void)
 
    // Return remote result
    printf("%s: returned %d\n", __func__, res);
+   call_release();
    return res;
 }
 
@@ -288,6 +309,7 @@ struct usb_bus* usb_get_busses(void)
 usb_dev_handle *usb_open(struct usb_device *dev)
 {
    // Get remote fd
+   call_lock();
    int fd = get_remote();
 
    // Send packet
@@ -314,6 +336,7 @@ usb_dev_handle *usb_open(struct usb_device *dev)
    }
 
    // Evaluate
+   call_release();
    printf("%s: returned %d (on fd %d)\n", __func__, res, devfd);
    if(res < 0)
       return NULL;
@@ -330,6 +353,7 @@ usb_dev_handle *usb_open(struct usb_device *dev)
 int usb_close(usb_dev_handle *dev)
 {
    // Get remote fd
+   call_lock();
    int fd = get_remote();
 
    // Send packet
@@ -353,13 +377,14 @@ int usb_close(usb_dev_handle *dev)
    }
 
    printf("%s: returned %d\n", __func__, res);
-
+   call_release();
    return res;
 }
 
 int usb_claim_interface(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
+   call_lock();
    int fd = get_remote();
 
    // Send packet
@@ -381,15 +406,43 @@ int usb_claim_interface(usb_dev_handle *dev, int interface)
    }
 
    printf("%s: returned %d\n", __func__, res);
-
+   call_release();
    return res;
+}
 
+int usb_release_interface(usb_dev_handle *dev, int interface)
+{
+   // Get remote fd
+   call_lock();
+   int fd = get_remote();
 
+   // Send packet
+   char buf[255];
+   packet_t pkt = pkt_create(buf, 255);
+   pkt_init(&pkt, UsbReleaseInterface);
+   pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
+   pkt_append(&pkt, IntegerType, sizeof(int),      &interface);
+   pkt_send(fd, pkt.buf, pkt_size(&pkt));
+
+   // Get response
+   int res = -1;
+   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbReleaseInterface) {
+      sym_t sym;
+      pkt_begin(&pkt, &sym);
+      if(sym.type == IntegerType) {
+         res = as_int(sym.val, sym.len);
+      }
+   }
+
+   printf("%s: returned %d\n", __func__, res);
+   call_release();
+   return res;
 }
 
 int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
+   call_lock();
    int fd = get_remote();
 
    // Send packet
@@ -411,7 +464,7 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
    }
 
    printf("%s: returned %d\n", __func__, res);
-
+   call_release();
    return res;
 
 }
@@ -424,6 +477,7 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
         int value, int index, char *bytes, int size, int timeout)
 {
    // Get remote fd
+   call_lock();
    int fd = get_remote();
 
    // Prepare packet
@@ -458,6 +512,85 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
    // Return response
    pkt_del(pkt);
    printf("%s: returned %d\n", __func__, res);
+   call_release();
+   return res;
+}
+
+/* libusb(4):
+ * Bulk transfers.
+ */
+
+int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
+{
+   // Get remote fd
+   call_lock();
+   int fd = get_remote();
+
+   // Prepare packet
+   packet_t* pkt = pkt_new(size + 128);
+   pkt_init(pkt, UsbBulkRead);
+   pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
+   pkt_append(pkt, IntegerType, sizeof(int), &ep);
+   pkt_append(pkt, IntegerType, sizeof(int), &size);
+   pkt_append(pkt, IntegerType, sizeof(int), &timeout);
+   pkt_send(fd, pkt->buf, pkt_size(pkt));
+   printf("%s: query 0x%02x ep %d size %d returned 0x%02x\n", __func__, UsbBulkRead, ep, size);
+
+   // Get response
+   int res = -1;
+   if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbBulkRead) {
+      sym_t sym;
+      pkt_begin(pkt, &sym);
+      if(sym.type == IntegerType) {
+         res = as_int(sym.val, sym.len);
+         sym_next(&sym);
+      }
+      if(sym.type == OctetType) {
+         if(res > 0) {
+            int minlen = (res > size) ? size : res;
+            memcpy(bytes, sym.val, minlen);
+         }
+      }
+   }
+
+   // Return response
+   pkt_del(pkt);
+   printf("%s: returned %d (op 0x%02x)\n", __func__, res, pkt->buf[0]);
+   call_release();
+   return res;
+}
+
+int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
+{
+   // Get remote fd
+   call_lock();
+   int fd = get_remote();
+
+   // Prepare packet
+   packet_t* pkt = pkt_new(size + 128);
+   pkt_init(pkt, UsbBulkWrite);
+   pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
+   pkt_append(pkt, IntegerType, sizeof(int), &ep);
+   pkt_append(pkt, OctetType,   size,        bytes);
+   pkt_append(pkt, IntegerType, sizeof(int), &timeout);
+   pkt_send(fd, pkt->buf, pkt_size(pkt));
+   printf("%s: query ep %d size %d\n", __func__, ep, size);
+
+   // Get response
+   int res = -1;
+   if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbBulkWrite) {
+      sym_t sym;
+      pkt_begin(pkt, &sym);
+      if(sym.type == IntegerType) {
+         res = as_int(sym.val, sym.len);
+         sym_next(&sym);
+      }
+   }
+
+   // Return response
+   pkt_del(pkt);
+   printf("%s: returned %d\n", __func__, res);
+   call_release();
    return res;
 }
 

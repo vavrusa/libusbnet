@@ -49,7 +49,10 @@ typedef enum {
    UsbClose              = CallType  +  6, // int usb_close()
    UsbControlMsg         = CallType  +  7, // int usb_control_msg()
    UsbClaimInterface     = CallType  +  8, // int usb_claim_interface()
-   UsbDetachKernelDriver = CallType  +  9  // int usb_detach_kernel_driver()
+   UsbReleaseInterface   = CallType  +  9, // int usb_release_interface()
+   UsbDetachKernelDriver = CallType  + 10, // int usb_detach_kernel_driver()
+   UsbBulkRead           = CallType  + 11, // int usb_bulk_read()
+   UsbBulkWrite          = CallType  + 12  // int usb_bulk_write()
 
 } Type;
 

@@ -56,7 +56,10 @@ bool UsbService::handle(int fd, Packet& pkt)
       case UsbClose:       usb_close(fd, pkt);        break;
       case UsbControlMsg:  usb_control_msg(fd, pkt);  break;
       case UsbClaimInterface: usb_claim_interface(fd, pkt); break;
+      case UsbReleaseInterface: usb_release_interface(fd, pkt); break;
       case UsbDetachKernelDriver: usb_detach_kernel_driver(fd, pkt); break;
+      case UsbBulkRead:    usb_bulk_read(fd, pkt);    break;
+      case UsbBulkWrite:   usb_bulk_write(fd, pkt);   break;
       default:
          fprintf(stderr, "Call:  0x%02x unhandled call type (fd %d).\n", pkt.op(), fd);
          return false;
@@ -229,6 +232,33 @@ void UsbService::usb_claim_interface(int fd, Packet &in)
    pkt.send(fd);
 }
 
+
+void UsbService::usb_release_interface(int fd, Packet &in)
+{
+   Symbol sym(in);
+   int devfd = sym.asInt(); sym.next();
+   int index = sym.asInt();
+   int res = -1;
+
+   // Find open device
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      usb_dev_handle* h = *i;
+      if(h->fd == devfd) {
+         res = ::usb_release_interface(h, index);
+         res = 0;
+         break;
+      }
+   }
+
+   printf("Call: usb_release_interface(%d) = %d\n", devfd, res);
+
+   // Return result
+   Packet pkt(UsbReleaseInterface);
+   pkt.addInt32((int32_t) res);
+   pkt.send(fd);
+}
+
 void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
 {
    Symbol sym(in);
@@ -263,7 +293,6 @@ void UsbService::usb_control_msg(int fd, Packet& in)
    usb_dev_handle* h = NULL;
    std::list<usb_dev_handle*>::iterator i;
    for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
-      fprintf(stderr, "bus %p device %p\n", (*i)->bus, (*i)->device);
       if((*i)->fd == devfd) {
          h = *i;
          break;
@@ -292,6 +321,80 @@ void UsbService::usb_control_msg(int fd, Packet& in)
    Packet pkt(UsbControlMsg);
    pkt.addInt32(res);
    pkt.addData(data, (res < 0) ? 0 : res, OctetType);
+   pkt.send(fd);
+}
+
+void UsbService::usb_bulk_read(int fd, Packet &in)
+{
+   Symbol sym(in);
+   int devfd = sym.asInt(); sym.next();
+
+   // Find open device
+   usb_dev_handle* h = NULL;
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      if((*i)->fd == devfd) {
+         h = *i;
+         break;
+      }
+   }
+
+   // Device not found
+   int res = -1;
+   char* data = NULL;
+   int ep = sym.asInt(); sym.next();
+   int size = sym.asInt(); sym.next();
+   int timeout = sym.asInt();
+   if(h != NULL && size > 0) {
+
+      // Call function
+      data = new char[size];
+      res = ::usb_bulk_read(h, ep, data, size, timeout);
+      printf("Call: usb_bulk_read(%d) = %d\n", devfd, res);
+   }
+
+   // Return packet
+   Packet pkt(UsbBulkRead);
+   pkt.addInt32(res);
+   pkt.addData(data, (res < 0) ? 0 : res, OctetType);
+   pkt.send(fd);
+
+   // Free data
+   if(data != NULL)
+      delete data;
+}
+
+void UsbService::usb_bulk_write(int fd, Packet &in)
+{
+   Symbol sym(in);
+   int devfd = sym.asInt(); sym.next();
+
+   // Find open device
+   usb_dev_handle* h = NULL;
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      if((*i)->fd == devfd) {
+         h = *i;
+         break;
+      }
+   }
+
+   // Device not found
+   int res = -1;
+   int ep = sym.asInt(); sym.next();
+   char* data = (char*) sym.asString();
+   int size = sym.length(); sym.next();
+   int timeout = sym.asInt();
+   if(h != NULL && size > 0) {
+
+      // Call function
+      res = ::usb_bulk_write(h, ep, data, size, timeout);
+      printf("Call: usb_bulk_write(%d) = %d\n", devfd, res);
+   }
+
+   // Return packet
+   Packet pkt(UsbBulkWrite);
+   pkt.addInt32(res);
    pkt.send(fd);
 }
 
