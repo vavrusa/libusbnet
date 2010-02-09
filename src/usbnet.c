@@ -25,8 +25,8 @@
 #include <sys/shm.h>
 #include <pthread.h>
 #include "usbnet.h"
+#include "usbproto.h"
 #include "common.h"
-#include "libusbproto.h"
 
 // Global call lock
 // TODO: make more efficient call exclusion

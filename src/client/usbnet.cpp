@@ -36,11 +36,11 @@ int main(int argc, char* argv[])
    // Parse command line arguments
    CmdFlags cmd(argc, argv);
    cmd.add('t', "target",   "Target hostname and port", "localhost:22222")
-      .add('h', "")
       .add('u', "user",     "Username")
       .add('p', "password", "Password")
       .add('a', "auth",     "Authentication method: none, ssh")
-      .add('l', "library",  "Preloaded library", "libusbnet.so");
+      .add('l', "library",  "Preloaded library", "libusbnet.so")
+      .add('h', "help");
 
    cmd.setUsage("Usage: usbnet [options] <executable>");
 
@@ -62,6 +62,10 @@ int main(int argc, char* argv[])
       case 'p': passwd = m.second; break;
       case 'a': auth   = m.second; break; // TODO: validate
       case 'l': lib    = m.second; break;
+      case 'h':
+         cmd.printHelp();
+         return EXIT_SUCCESS;
+         break;
       case  0 :
          exec = m.second;
          break;

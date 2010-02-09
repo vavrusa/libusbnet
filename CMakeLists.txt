@@ -19,6 +19,8 @@ if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
 endif(${CMAKE_BUILD_TYPE} STREQUAL Debug)
 
 # Dependencies
+include(${CMAKE_MODULE_PATH}/FindUSB.cmake)
+include(${CMAKE_MODULE_PATH}/CheckPrototypeExists.cmake)
 find_package(USB REQUIRED)
 include_directories(${LIBUSB_INCLUDE_DIR})
 

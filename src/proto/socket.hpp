@@ -22,6 +22,7 @@
 #define __socket_hpp__
 #include <string>
 #include <netinet/in.h>
+#include <sys/socket.h>
 
 /** C++ style wrapper for BSD sockets with state checking and error control.
   */

@@ -272,7 +272,11 @@ void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
    for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
       usb_dev_handle* h = *i;
       if(h->fd == devfd) {
+#ifdef HAVE_USB_DETACH_KERNEL_DRIVER_NP
          res = ::usb_detach_kernel_driver_np(h, index);
+#else
+         res = 0;
+#endif
          break;
       }
    }
