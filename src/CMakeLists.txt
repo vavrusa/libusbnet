@@ -11,7 +11,7 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
 set(sources   usbnet.c
               )
 set(headers   usbnet.h
-              libusbproto.h
+              usbproto.h
               )
 
 # Find pthreads
