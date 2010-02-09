@@ -8,9 +8,11 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
 set(sources   usbnet.cpp
               clientsocket.cpp
               ${SHARED_DIR}/socket.cpp
+              ${SHARED_DIR}/cmdflags.cpp
               )
 set(headers   clientsocket.hpp
               ${SHARED_DIR}/socket.hpp
+              ${SHARED_DIR}/cmdflags.hpp
               )
 
 add_executable(usbnet-wrapper ${sources} ${headers})

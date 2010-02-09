@@ -19,6 +19,7 @@
 
 #include "clientsocket.hpp"
 #include "common.h"
+#include "cmdflags.hpp"
 #include <sys/shm.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
@@ -28,13 +29,56 @@
 int main(int argc, char* argv[])
 {
    // Create remote connection
-   // TODO: args
    ClientSocket remote;
-   const char* host = "localhost";
-   int port = 22222;
-   printf("Connecting to %s:%d ...\n", host, port);
-   if(remote.connect(host, port) != Socket::Ok) {
-      printf("Connection failed.\n");
+   std::string host("localhost"), user, passwd, auth, lib("libusbnet.so"), exec;
+   int port = 22222, pos = 0;
+
+   // Parse command line arguments
+   CmdFlags cmd(argc, argv);
+   cmd.add('h', "host",     "Target hostname and port", "localhost:22222")
+      .add('u', "user",     "Username")
+      .add('p', "password", "Password")
+      .add('a', "auth",     "Authentication method: none, ssh")
+      .add('l', "library",  "Preloaded library", "libusbnet.so");
+
+   cmd.setUsage("Usage: usbnet [options] <executable>");
+
+   // Parse command line arguments
+   CmdFlags::Match m = cmd.getopt();
+   while(m.first >= 0) {
+
+      // Evaluate
+      switch(m.first) {
+      case 'h':
+         host = m.second;
+         pos = host.find(':');
+         if(pos != std::string::npos) {
+            port = atoi(host.substr(pos + 1).c_str());
+            host.erase(pos);
+         }
+         break;
+      case 'u': user   = m.second; break;
+      case 'p': passwd = m.second; break;
+      case 'a': auth   = m.second; break; // TODO: validate
+      case 'l': lib    = m.second; break;
+      case  0 :
+         exec = m.second;
+         break;
+      }
+
+      // Next option
+      m = cmd.getopt();
+   }
+
+   // Empty executable
+   if(exec.empty()) {
+      cmd.printHelp();
+      return EXIT_FAILURE;
+   }
+
+   printf("Client: connecting to %s:%d ...\n", host.c_str(), port);
+   if(remote.connect(host.c_str(), port) != Socket::Ok) {
+      printf("Client: connection failed.\n");
       return EXIT_FAILURE;
    }
 
@@ -71,16 +115,14 @@ int main(int argc, char* argv[])
    }
 
    // Run executable with preloaded library
-   if(argc > 1) {
-      std::string cmd("LD_PRELOAD=\"");
-      cmd.append(argv[1]);
-      cmd.append("\" ");
-      cmd.append(argv[2]);
-      printf("Executing: %s\n", cmd.c_str());
+   std::string execs("LD_PRELOAD=\"");
+   execs.append(lib);
+   execs.append("\" ");
+   execs.append(exec);
+   printf("Executing: %s\n", execs.c_str());
 
-      int ret = system(cmd.c_str());
-      printf("IPC: executable returned %d\n", ret);
-   }
+   int ret = system(execs.c_str());
+   printf("IPC: executable returned %d\n", ret);
 
    // Delete segment
    printf("IPC: removing segment %d\n", shm_id);
