@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include "usbservice.hpp"
+#include "protocol.hpp"
 #include <netinet/tcp.h>
 #include <cstdio>
 

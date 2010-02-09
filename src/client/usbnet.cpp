@@ -35,7 +35,8 @@ int main(int argc, char* argv[])
 
    // Parse command line arguments
    CmdFlags cmd(argc, argv);
-   cmd.add('h', "host",     "Target hostname and port", "localhost:22222")
+   cmd.add('t', "target",   "Target hostname and port", "localhost:22222")
+      .add('h', "")
       .add('u', "user",     "Username")
       .add('p', "password", "Password")
       .add('a', "auth",     "Authentication method: none, ssh")
@@ -49,7 +50,7 @@ int main(int argc, char* argv[])
 
       // Evaluate
       switch(m.first) {
-      case 'h':
+      case 't':
          host = m.second;
          pos = host.find(':');
          if(pos != std::string::npos) {

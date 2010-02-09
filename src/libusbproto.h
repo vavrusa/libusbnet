@@ -17,50 +17,26 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
 
-#ifndef __usbservice_hpp__
-#define __usbservice_hpp__
-#include "serversocket.hpp"
-#include "libusbproto.h"
-#include "usbnet.h"
-#include <list>
+#ifndef __libusbproto_h__
+#define __libusbproto_h__
 
-class UsbService : public ServerSocket
-{
-   public:
-   UsbService(int fd = -1);
-   ~UsbService();
+#include "protocol.h"
 
-   /** Reimplemented packet handling.
-     */
-   virtual bool handle(int fd, Packet& pkt);
+// Calls
+typedef enum {
+   NullRequest           = CallType,       // ping
+   UsbInit               = CallType  +  1, // usb_init()
+   UsbFindBusses         = CallType  +  2, // usb_find_busses()
+   UsbFindDevices        = CallType  +  3, // usb_find_devices()
+   UsbGetBusses          = CallType  +  4, // usb_bus* usb_get_busses()
+   UsbOpen               = CallType  +  5, // usb_dev_handle *usb_open()
+   UsbClose              = CallType  +  6, // int usb_close()
+   UsbControlMsg         = CallType  +  7, // int usb_control_msg()
+   UsbClaimInterface     = CallType  +  8, // int usb_claim_interface()
+   UsbReleaseInterface   = CallType  +  9, // int usb_release_interface()
+   UsbDetachKernelDriver = CallType  + 10, // int usb_detach_kernel_driver()
+   UsbBulkRead           = CallType  + 11, // int usb_bulk_read()
+   UsbBulkWrite          = CallType  + 12  // int usb_bulk_write()
+} Call;
 
-   protected:
-
-   /* libusb implementations.
-    */
-
-   /* (1) Core functions. */
-   void usb_init(int fd, Packet& in);
-   void usb_find_busses(int fd, Packet& in);
-   void usb_find_devices(int fd, Packet& in);
-
-   /* (2) Device controls. */
-   void usb_open(int fd, Packet& in);
-   void usb_close(int fd, Packet& in);
-   void usb_claim_interface(int fd, Packet& in);
-   void usb_release_interface(int fd, Packet& in);
-   void usb_detach_kernel_driver(int fd, Packet& in);
-
-   /* (3) Control transfers. */
-   void usb_control_msg(int fd, Packet& in);
-
-   /* (4) Bulk transfers. */
-   void usb_bulk_read(int fd, Packet& in);
-   void usb_bulk_write(int fd, Packet& in);
-
-   private:
-   /* libusb data storage */
-   std::list<usb_dev_handle*> mOpenList;
-};
-
-#endif // __usbservice_hpp__
+#endif // __libusbproto_h__
