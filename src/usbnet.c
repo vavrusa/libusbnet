@@ -368,6 +368,18 @@ int usb_close(usb_dev_handle *dev)
    return res;
 }
 
+int usb_reset(usb_dev_handle *dev)
+{
+   NOT_IMPLEMENTED
+   return 0;
+}
+
+int usb_set_configuration(usb_dev_handle *dev, int configuration)
+{
+   NOT_IMPLEMENTED
+   return 0;
+}
+
 int usb_claim_interface(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
