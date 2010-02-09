@@ -71,7 +71,7 @@ class Block
    Block& finalize();
 
    /** Begin new block. */
-   Block writeBlock(Type type = InvalidType) {
+   Block writeBlock(uint8_t type = InvalidType) {
       Block block(mBuf, mBuf.size());
       if(type != InvalidType)
          block.push(type);
@@ -79,10 +79,10 @@ class Block
    }
 
    /** Add encoded numeric value. */
-   Block& addNumeric(Type type, uint8_t len, uint32_t val = 0);
+   Block& addNumeric(uint8_t type, uint8_t len, uint32_t val = 0);
 
    /** Add octet string. */
-   Block& addString(const char* str, Type type = OctetType);
+   Block& addString(const char* str, uint8_t type = OctetType);
 
    /** Add boolean. */
    Block& addBool(bool val) {
@@ -90,7 +90,7 @@ class Block
    }
 
    /** Add raw data. */
-   Block& addData(const char* data, size_t size, Type type = RawType);
+   Block& addData(const char* data, size_t size, uint8_t type = RawType);
 
    /* Integer encoding - 8,16,32 bits */
    Block& addUInt8(uint8_t val) {
@@ -210,7 +210,7 @@ class Packet : public Block
    public:
 
    /** Create on new/existing buffer. */
-   Packet(Type op = InvalidType)
+   Packet(uint8_t op = InvalidType)
       : Block(mBuf, 0) {
       if(op != InvalidType) {
          push(op);

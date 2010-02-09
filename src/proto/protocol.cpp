@@ -54,7 +54,7 @@ Block& Block::append(const char* str, size_t size) {
    return *this;
 }
 
-Block& Block::addNumeric(Type type, uint8_t len, uint32_t val)
+Block& Block::addNumeric(uint8_t type, uint8_t len, uint32_t val)
 {
    // Check
    if(len != sizeof(uint32_t) &&
@@ -75,7 +75,7 @@ Block& Block::addNumeric(Type type, uint8_t len, uint32_t val)
    return *this;
 }
 
-Block& Block::addData(const char* data, size_t size, Type type)
+Block& Block::addData(const char* data, size_t size, uint8_t type)
 {
    push((uint8_t) type);
    pushPacked(size);
@@ -83,7 +83,7 @@ Block& Block::addData(const char* data, size_t size, Type type)
 }
 
 
-Block& Block::addString(const char* str, Type type)
+Block& Block::addString(const char* str, uint8_t type)
 {
    if(str != 0) {
       int len = strlen(str) + 1; // NULL byte

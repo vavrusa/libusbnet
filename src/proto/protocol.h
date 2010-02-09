@@ -22,7 +22,8 @@
 #define __protocol_h__
 #include <stdint.h>
 
-/** ASN.1 semantic types
+/** ASN.1 semantic types.
+  *
   */
 typedef enum {
 
@@ -38,21 +39,6 @@ typedef enum {
    StructureType  = 0x20,
    RawType        = StructureType + 1,
    CallType       = StructureType|SequenceType,
-
-   // Calls
-   NullRequest           = CallType,       // Ping
-   UsbInit               = CallType  +  1, // usb_init()
-   UsbFindBusses         = CallType  +  2, // usb_find_busses()
-   UsbFindDevices        = CallType  +  3, // usb_find_devices()
-   UsbGetBusses          = CallType  +  4, // usb_bus* usb_get_busses()
-   UsbOpen               = CallType  +  5, // usb_dev_handle *usb_open()
-   UsbClose              = CallType  +  6, // int usb_close()
-   UsbControlMsg         = CallType  +  7, // int usb_control_msg()
-   UsbClaimInterface     = CallType  +  8, // int usb_claim_interface()
-   UsbReleaseInterface   = CallType  +  9, // int usb_release_interface()
-   UsbDetachKernelDriver = CallType  + 10, // int usb_detach_kernel_driver()
-   UsbBulkRead           = CallType  + 11, // int usb_bulk_read()
-   UsbBulkWrite          = CallType  + 12  // int usb_bulk_write()
 
 } Type;
 
@@ -77,7 +63,13 @@ typedef struct {
    void*    val;
 } sym_t;
 
-#define PACKET_MINSIZE (sizeof(uint8_t)+sizeof(uint8_t)+sizeof(uint32_t)) // 1B op + 1B prefix + 4B length
+/** Packet manipulation interface.
+ *  TODO: Automatic allocation
+ *        Fixed size packets size checking.
+ */
+
+// 1B op + 1B prefix + 4B length
+#define PACKET_MINSIZE (sizeof(uint8_t)+sizeof(uint8_t)+sizeof(uint32_t))
 
 /** Initialize packet on existing buffer.
   * \param buf must be char* or char[]
@@ -102,7 +94,7 @@ void pkt_del(packet_t* pkt);
   * \param pkt initialized packet
   * \param op packet opcode
   */
-void pkt_init(packet_t* pkt, Type op);
+void pkt_init(packet_t* pkt, uint8_t op);
 
 /** Append parameter to packet.
   * \param pkt packet
@@ -111,7 +103,7 @@ void pkt_init(packet_t* pkt, Type op);
   * \param val  parameter value
   * \return bytes written
   */
-int pkt_append(packet_t* pkt, Type type, uint16_t len, void* val);
+int pkt_append(packet_t* pkt, uint8_t type, uint16_t len, void* val);
 
 /** Send packet.
   * \param fd destination filedescriptor
@@ -137,6 +129,19 @@ uint32_t pkt_recv_header(int fd, char* buf);
 /** Block until all pending data is received.
   */
 uint32_t recv_full(int fd, char* buf, uint32_t pending);
+
+
+/** Packet parsing interface.
+ * Each entity is represented as symbol - structures and atomic types.
+ * Example:
+ *   packet = 1 {     // 0x31 - Type, 0x06 - Length, is structural
+ *     int(4B) 2;     // 0x02 - Type, 0x04 - Length, 0x02 0x00 0x00 0x00 - Value
+ *   }
+ * How to parse:
+ *   pkt_begin(&pkt, &sym); // Read packet size and enter
+ *   if(sym.type == IntegerType)
+ *     printf("int(4B): %d\n", as_int(sym.val, sym.len));
+ */
 
 /** Return first symbol in packet.
   * \param pkt source packet

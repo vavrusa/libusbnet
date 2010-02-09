@@ -42,7 +42,7 @@ void pkt_del(packet_t* pkt) {
    free(pkt);
 }
 
-void pkt_init(packet_t* pkt, Type op)
+void pkt_init(packet_t* pkt, uint8_t op)
 {
    // Clear
    memset(pkt->buf, 0, pkt->bufsize);
@@ -140,7 +140,7 @@ uint32_t pkt_recv_header(int fd, char *buf)
    return rcvd;
 }
 
-int pkt_append(packet_t* pkt, Type type, uint16_t len, void* val)
+int pkt_append(packet_t* pkt, uint8_t type, uint16_t len, void* val)
 {
    char* dst = pkt->buf + pkt->size;
 
