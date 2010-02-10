@@ -361,13 +361,31 @@ int usb_close(usb_dev_handle *dev)
    return res;
 }
 
-int usb_reset(usb_dev_handle *dev)
+int usb_set_configuration(usb_dev_handle *dev, int configuration)
 {
    NOT_IMPLEMENTED
    return 0;
 }
 
-int usb_set_configuration(usb_dev_handle *dev, int configuration)
+int usb_set_altinterface(usb_dev_handle *dev, int alternate)
+{
+   NOT_IMPLEMENTED
+   return 0;
+}
+
+int usb_resetep(usb_dev_handle *dev, unsigned int ep)
+{
+   NOT_IMPLEMENTED
+   return 0;
+}
+
+int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
+{
+   NOT_IMPLEMENTED
+   return 0;
+}
+
+int usb_reset(usb_dev_handle *dev)
 {
    NOT_IMPLEMENTED
    return 0;
@@ -429,36 +447,6 @@ int usb_release_interface(usb_dev_handle *dev, int interface)
    call_release();
    printf("%s: returned %d\n", __func__, res);
    return res;
-}
-
-int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
-{
-   // Get remote fd
-   call_lock();
-   int fd = get_remote();
-
-   // Send packet
-   char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbDetachKernelDriver);
-   pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
-   pkt_append(&pkt, IntegerType, sizeof(int),      &interface);
-   pkt_send(fd, pkt.buf, pkt_size(&pkt));
-
-   // Get response
-   int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbDetachKernelDriver) {
-      sym_t sym;
-      pkt_begin(&pkt, &sym);
-      if(sym.type == IntegerType) {
-         res = as_int(sym.val, sym.len);
-      }
-   }
-
-   call_release();
-   printf("%s: returned %d\n", __func__, res);
-   return res;
-
 }
 
 /* libusb(3):
@@ -584,6 +572,55 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
    call_release();
    printf("%s: returned %d\n", __func__, res);
    return res;
+}
+
+/* libusb(5):
+ * Interrupt transfers.
+ */
+int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
+{
+   NOT_IMPLEMENTED
+   return -1;
+}
+
+int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
+{
+   NOT_IMPLEMENTED
+   return -1;
+}
+
+/* libusb(6):
+ * Non-portable.
+ */
+
+int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
+{
+   // Get remote fd
+   call_lock();
+   int fd = get_remote();
+
+   // Send packet
+   char buf[255];
+   packet_t pkt = pkt_create(buf, 255);
+   pkt_init(&pkt, UsbDetachKernelDriver);
+   pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
+   pkt_append(&pkt, IntegerType, sizeof(int),      &interface);
+   pkt_send(fd, pkt.buf, pkt_size(&pkt));
+
+   // Get response
+   int res = -1;
+   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbDetachKernelDriver) {
+      sym_t sym;
+      pkt_begin(&pkt, &sym);
+      if(sym.type == IntegerType) {
+         res = as_int(sym.val, sym.len);
+      }
+   }
+
+   call_release();
+   printf("%s: returned %d\n", __func__, res);
+   return res;
+
 }
 
 /* Imported from libusb-0.1.12 for forward compatibility with libusb-1.0.

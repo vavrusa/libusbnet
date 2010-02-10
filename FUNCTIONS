@@ -1,29 +1,38 @@
 Progress
-(A - assigned, C - complete, N - not needed)
-============================================
-C usb_init()
-C usb_find_busses()
-C usb_find_devices()
-C usb_get_busses()
+(A - assigned, C - complete, N - not needed, B - broken)
+========================================================
+I. Core
+C usb_init -- Initialize libusb
+C usb_find_busses -- Finds all USB busses on system
+C usb_find_devices -- Find all devices on all USB devices
+C usb_get_busses -- Return the list of USB busses found
 
-Milestone 0 (device discovery):
-===============================
-C usb_init()
-C usb_find_busses()
-A usb_find_devices() - partial information transferred
-C usb_get_busses()
+II. Device operations
+C usb_open -- Opens a USB device
+C usb_close -- Closes a USB device
+  usb_set_configuration -- Sets the active configuration of a device
+  usb_set_altinterface -- Sets the active alternate setting of the current interface
+  usb_resetep -- Resets state for an endpoint
+  usb_clear_halt -- Clears any halt status on an endpoint
+  usb_reset -- Resets a device
+C usb_claim_interface -- Claim an interface of a device
+C usb_release_interface -- Releases a previously claimed interface
 
-Milestone 1 (libftdi compatibility):
-====================================
-C usb_close()
-C usb_open()
-C usb_get_string_simple()
-N usb_strerror()
-N usb_set_configuration()
-C usb_claim_interface()
-C usb_control_msg()
-C usb_release_interface()
-C usb_bulk_write()
-C usb_bulk_read()
-N usb_get_driver_np() - probably
-C usb_detach_kernel_driver_np()
+III. Control Transfers
+C usb_control_msg -- Send a control message to a device
+N usb_get_string -- Retrieves a string descriptor from a device
+N usb_get_string_simple -- Retrieves a string descriptor from a device using the first language
+N usb_get_descriptor -- Retrieves a descriptor from a device's default control pipe
+N usb_get_descriptor_by_endpoint -- Retrieves a descriptor from a device
+
+IV. Bulk Transfers
+C usb_bulk_write -- Write data to a bulk endpoint
+C usb_bulk_read -- Read data from a bulk endpoint
+
+V. Interrupt Transfers
+  usb_interrupt_write -- Write data to an interrupt endpoint
+  usb_interrupt_read -- Read data from a interrupt endpoint
+
+VI. Non Portable
+  usb_get_driver_np -- Get driver name bound to interface
+C usb_detach_kernel_driver_np -- Detach kernel driver from interface
