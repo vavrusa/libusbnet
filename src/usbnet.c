@@ -172,7 +172,6 @@ int usb_find_devices(void)
             sym_enter(&sym);
 
             // Allocate bus
-            uint8_t is_new = 0;
             if(rbus->next == NULL) {
 
                // Allocate next item
@@ -181,7 +180,6 @@ int usb_find_devices(void)
                rbus->next = nbus;
                nbus->prev = rbus;
                rbus = nbus;
-               is_new = 1;
             }
             else
                rbus = rbus->next;
@@ -195,9 +193,6 @@ int usb_find_devices(void)
             // Read location
             if(sym.type == IntegerType) {
                rbus->location = as_int(sym.val, sym.len);
-               if(is_new) {
-                  printf("%s: new bus id: %03d\n", __func__, rbus->location);
-               }
                sym_next(&sym);
             }
 
@@ -209,7 +204,6 @@ int usb_find_devices(void)
                sym_enter(&sym);
 
                // Initialize
-               uint8_t is_new = 0;
                if(dev->next == NULL) {
                   dev->next = malloc(sizeof(struct usb_device));
                   memset(dev->next, 0, sizeof(struct usb_device));
@@ -218,7 +212,6 @@ int usb_find_devices(void)
                      dev->next->prev = dev;
                   if(rbus->devices == NULL)
                      rbus->devices = dev->next;
-                  is_new = 1;
                }
 
                dev = dev->next;
@@ -238,18 +231,16 @@ int usb_find_devices(void)
                // Read devnum
                if(sym.type == IntegerType) {
                   dev->devnum = as_int(sym.val, sym.len);
-                  if(is_new) {
-                     printf("%s: new device id: %03d vendor_id: %04x product_id: %04x\n",
-                            __func__, dev->devnum, dev->descriptor.idVendor, dev->descriptor.idProduct);
-                  }
                   sym_next(&sym);
                }
+
+              printf("Bus %s Device %s: ID %04x:%04x\n", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
             }
 
             // Free unused devices
             while(dev->next != NULL) {
                struct usb_device* ddev = dev->next;
-               printf("%s: deleting device id: %03d\n", __func__, ddev->devnum);
+               printf("%s: deleting device %03d\n", __func__, ddev->devnum);
                dev->next = ddev->next;
                free(ddev);
             }
@@ -260,8 +251,8 @@ int usb_find_devices(void)
             sym_next(&sym);
          }
 
-         // Next symbol
-         if(sym.next == pkt_end(&pkt))
+         // Check boundaries
+         if(sym.cur == pkt_end(&pkt))
             break;
       }
 

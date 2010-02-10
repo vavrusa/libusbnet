@@ -119,11 +119,18 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 
          /* char filename[PATH_MAX + 1];
             struct usb_device_descriptor descriptor;
+            TODO: struct usb_config_descriptor *config;
             u_int8_t devnum;
-         */
+
+            TODO: unsigned char num_children;
+                  struct usb_device **children;
+          */
+         printf("Bus %s Device %s: ID %04x:%04x\n",
+                bus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
          Block devBlock = block.writeBlock(SequenceType);
          devBlock.addString(dev->filename);
-         devBlock.addData((const char*) &(dev->descriptor), sizeof(dev->descriptor));
+         devBlock.addData((const char*) &(dev->descriptor), sizeof(struct usb_device_descriptor));
+         //devBlock.addData((const char*) dev->config, sizeof(struct usb_config_descriptor));
          devBlock.addUInt8(dev->devnum);
          devBlock.finalize();
       }
