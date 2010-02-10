@@ -135,8 +135,6 @@ int usb_find_busses(void)
 
 int usb_find_devices(void)
 {
-   NOT_IMPLEMENTED
-
    // Get remote fd
    call_lock();
    int fd = get_remote();
@@ -266,6 +264,10 @@ int usb_find_devices(void)
 
       // Save busses
       __remote_bus = vbus.next;
+
+      // Override original variable
+      printf("%s: overriding global usb_busses on %p\n", __func__, usb_busses);
+      usb_busses = __remote_bus;
    }
 
    // Return remote result
