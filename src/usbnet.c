@@ -45,6 +45,7 @@ static int __remote_fd = -1;
 
 // Remote USB busses with devices
 static struct usb_bus* __remote_bus = 0;
+extern struct usb_bus* usb_busses;
 
 // Return remote filedescriptor
 static int get_remote() {
@@ -91,6 +92,10 @@ static int get_remote() {
 
 void usb_init(void)
 {
+   // Locate original symbol
+   //static int (*func)(void) = NULL;
+   //READ_SYM(func, __func__)
+
    // Initialize remote fd
    call_lock();
    int fd = get_remote();
@@ -101,6 +106,8 @@ void usb_init(void)
    pkt_init(&pkt, UsbInit);
    pkt_send(fd, pkt.buf, pkt_size(&pkt));
    call_release();
+
+   // Initialize locally
    printf("%s: called\n", __func__);
 }
 

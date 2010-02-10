@@ -16,9 +16,6 @@ set(headers   serversocket.hpp
 # Build executable
 add_executable(usbexportd ${sources} ${headers})
 
-# Prevent clobbering each other during the build
-set_target_properties(usbexportd PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-
 # Dependencies
 target_link_libraries(usbexportd ${LIBUSB_LIBRARIES} urpc_pp)
 

@@ -12,6 +12,7 @@ set(sources   usbnet.c
               )
 set(headers   usbnet.h
               usbproto.h
+              ${SHARED_DIR}/common.h
               )
 
 # Find pthreads
@@ -26,7 +27,7 @@ add_subdirectory(server)
 add_library(usbnet SHARED ${sources} ${headers})
 
 # Dependencies
-target_link_libraries(usbnet ${CMAKE_THREAD_LIBS_INIT} urpc_pp)
+target_link_libraries(usbnet ${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES} urpc_pp)
 
 # Install
 install( TARGETS usbnet
