@@ -173,19 +173,24 @@ void UsbService::usb_open(int fd, Packet& in)
 
    // Open device
    int res = -1;
+   int openfd = -1;
    usb_dev_handle* udev = NULL;
    if(rdev != NULL) {
-      udev = ::usb_open(rdev);
-      mOpenList.push_back(udev);
-      res = 0;
+      // Check successful open
+      if((udev = ::usb_open(rdev)) != NULL) {
+         mOpenList.push_back(udev);
+         res = 0;
+         openfd = udev->fd;
+      }
    }
 
-   printf("Call: usb_open(%u:%u) = %d (fd %d)\n", busid, devid, res, udev->fd);
+
+   printf("Call: usb_open(%u:%u) = %d (fd %d)\n", busid, devid, res, openfd);
 
    // Return result
    Packet pkt(UsbOpen);
    pkt.addInt8(res);
-   pkt.addInt32(udev->fd);
+   pkt.addInt32(openfd);
    pkt.send(fd);
 }
 
