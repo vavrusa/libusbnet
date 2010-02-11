@@ -30,17 +30,17 @@ int main(int argc, char* argv[])
 {
    // Create remote connection
    ClientSocket remote;
-   std::string host("localhost"), user, passwd, auth, lib("libusbnet.so"), exec;
-   int port = 22222, pos = 0;
+   std::string host("localhost"), user, auth, lib("libusbnet.so"), exec;
+   int port = 22222, pos = 0, timeout = 1000;
 
    // Parse command line arguments
    CmdFlags cmd(argc, argv);
-   cmd.add('t', "target",   "Target hostname and port", "localhost:22222")
+   cmd.add('h', "host",     "Target hostname and port", "localhost:22222")
       .add('u', "user",     "Username")
-      .add('p', "password", "Password")
       .add('a', "auth",     "Authentication method: none, ssh")
       .add('l', "library",  "Preloaded library", "libusbnet.so")
-      .add('h', "help");
+      .add('t', "timeout",  "Connection timeout (ms).", "1000")
+      .add('?', "help");
 
    cmd.setUsage("Usage: usbnet [options] <executable>");
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
       // Evaluate
       switch(m.first) {
-      case 't':
+      case 'h':
          host = m.second;
          pos = host.find(':');
          if(pos != std::string::npos) {
@@ -58,11 +58,11 @@ int main(int argc, char* argv[])
             host.erase(pos);
          }
          break;
-      case 'u': user   = m.second; break;
-      case 'p': passwd = m.second; break;
-      case 'a': auth   = m.second; break; // TODO: validate
-      case 'l': lib    = m.second; break;
-      case 'h':
+      case 'u': user    = m.second; break;
+      case 'a': auth    = m.second; break;
+      case 'l': lib     = m.second; break;
+      case 't': timeout = atoi(m.second.c_str()); break;
+      case '?':
          cmd.printHelp();
          return EXIT_SUCCESS;
          break;
@@ -81,9 +81,27 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
    }
 
-   printf("Client: connecting to %s:%d ...\n", host.c_str(), port);
+   // Authenticate
+   if(auth == "ssh") {
+      remote.setMethod(ClientSocket::SSH);
+      remote.setCredentials(user);
+      remote.setTimeout(timeout);
+   }
+   else {
+
+      // Invalid auth method
+      if(!auth.empty()) {
+         fprintf(stderr, "Client: invalid authentication method '%s'\n", auth.c_str());
+         cmd.printHelp();
+         return EXIT_FAILURE;
+      }
+   }
+
+   // Connect
+      printf("Client: connecting to %s:%d ...\n", host.c_str(), port);
    if(remote.connect(host.c_str(), port) != Socket::Ok) {
       printf("Client: connection failed.\n");
+      remote.close();
       return EXIT_FAILURE;
    }
 
