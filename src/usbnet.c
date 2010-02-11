@@ -27,6 +27,7 @@
 #include "usbnet.h"
 #include "usbproto.h"
 #include "common.h"
+#include <netinet/in.h>
 
 // Global call lock
 // TODO: make more efficient call exclusion
@@ -51,29 +52,36 @@ extern struct usb_bus* usb_busses;
 static int get_remote() {
 
    // Check fd
-   if(__remote_fd != -1)
-      return __remote_fd;
+   if(__remote_fd == -1) {
 
-   // Get fd from SHM
-   int shm_id = 0;
-   printf("IPC: accessing segment at key 0x%x (%d bytes)\n", SHM_KEY, SHM_SIZE);
-   if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) != -1) {
+      // Get fd from SHM
+      int shm_id = 0;
+      printf("IPC: accessing segment at key 0x%x (%d bytes)\n", SHM_KEY, SHM_SIZE);
+      if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) != -1) {
 
-      // Attach segment and read fd
-      printf("IPC: attaching segment %d\n", shm_id);
-      void* shm_addr = NULL;
-      if ((shm_addr = shmat(shm_id, NULL, 0)) != (void *) -1) {
+         // Attach segment and read fd
+         printf("IPC: attaching segment %d\n", shm_id);
+         void* shm_addr = NULL;
+         if ((shm_addr = shmat(shm_id, NULL, 0)) != (void *) -1) {
 
-         // Read fd
-         __remote_fd = *((int*) shm_addr);
+            // Read fd
+            __remote_fd = *((int*) shm_addr);
 
-         // Detach
-         shmdt(shm_addr);
+            // Detach
+            shmdt(shm_addr);
+         }
       }
+
+      // Check resulting fd
+      printf("IPC: remote fd is %d\n", __remote_fd);
    }
 
-   // Check resulting fd
-   printf("IPC: remote fd is %d\n", __remote_fd);
+   // Check peer name - keep-alive
+   struct sockaddr_in addr;
+   int len = sizeof(addr);
+   if(getpeername(__remote_fd, (struct sockaddr*)& addr, &len) < 0)
+      __remote_fd = -1;
+
    if(__remote_fd == -1) {
       fprintf(stderr, "IPC: unable to access remote fd\n");
       exit(1);

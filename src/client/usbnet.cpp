@@ -107,7 +107,11 @@ int main(int argc, char* argv[])
 
    // Disable TCP buffering
    int flag = 1;
-   setsockopt(remote.sock(), IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
+   if(setsockopt(remote.sock(), IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int)) < 0) {
+      printf("Client: connection failed.\n");
+      remote.close();
+      return EXIT_FAILURE;
+   }
 
    // Create SHM segment
    int shm_id = 0;
