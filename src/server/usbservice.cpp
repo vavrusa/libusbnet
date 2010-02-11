@@ -61,6 +61,13 @@ bool UsbService::handle(int fd, Packet& pkt)
       case UsbDetachKernelDriver: usb_detach_kernel_driver(fd, pkt); break;
       case UsbBulkRead:    usb_bulk_read(fd, pkt);    break;
       case UsbBulkWrite:   usb_bulk_write(fd, pkt);   break;
+      case UsbSetConfiguration: usb_set_configuration(fd, pkt); break;
+      case UsbSetAltInterface: usb_set_altinterface(fd, pkt); break;
+      case UsbResetEp:     usb_resetep(fd, pkt); break;
+      case UsbClearHalt:   usb_clear_halt(fd, pkt); break;
+      case UsbReset:       usb_reset(fd, pkt); break;
+      case UsbInterruptWrite: usb_interrupt_write(fd, pkt); break;
+      case UsbInterruptRead: usb_interrupt_read(fd, pkt); break;
       default:
          log_msg("Call: unhandled call type: 0x%02x (fd %d)", pkt.op(), fd);
          return false;
@@ -238,6 +245,31 @@ void UsbService::usb_close(int fd, Packet& in)
    pkt.send(fd);
 }
 
+void UsbService::usb_set_configuration(int fd, Packet &in)
+{
+   NOT_IMPLEMENTED
+}
+
+void UsbService::usb_set_altinterface(int fd, Packet &in)
+{
+   NOT_IMPLEMENTED
+}
+
+void UsbService::usb_resetep(int fd, Packet &in)
+{
+   NOT_IMPLEMENTED
+}
+
+void UsbService::usb_clear_halt(int fd, Packet &in)
+{
+   NOT_IMPLEMENTED
+}
+
+void UsbService::usb_reset(int fd, Packet &in)
+{
+   NOT_IMPLEMENTED
+}
+
 void UsbService::usb_claim_interface(int fd, Packet &in)
 {
    Symbol sym(in);
@@ -263,7 +295,6 @@ void UsbService::usb_claim_interface(int fd, Packet &in)
    pkt.addInt32((int32_t) res);
    pkt.send(fd);
 }
-
 
 void UsbService::usb_release_interface(int fd, Packet &in)
 {
@@ -434,3 +465,12 @@ void UsbService::usb_bulk_write(int fd, Packet &in)
    pkt.send(fd);
 }
 
+void UsbService::usb_interrupt_write(int fd, Packet &in)
+{
+   NOT_IMPLEMENTED
+}
+
+void UsbService::usb_interrupt_read(int fd, Packet &in)
+{
+   NOT_IMPLEMENTED
+}
