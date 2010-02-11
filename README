@@ -5,5 +5,20 @@ libusbnet is a wrapper for libusb library
 to enable communication with USB devices over
 TCP/IP.
 
+Installation
+============
+mkdir build && cd build # Create build directory
+cmake ..                # Create Makefiles using CMake
+make
+sudo make install
+
+Usage
+=====
+See "usbnet --help".
+
+SSH authentication
+==================
+See SSH_HOWTO for more information.
+
 ---
 Marek Vavrusa <marek@vavrusa.com>

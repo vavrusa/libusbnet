@@ -1,0 +1,21 @@
+SSH Authentication
+==================
+
+SSH authentication uses publickey-based authentication.
+To use it, you have to generate your SSH key pair and copy it to server.
+
+1. Generate your key pair
+ ssh-keygen
+
+2. Copy your public key to remote server
+ ssh-copy-id -i ~/.ssh/id_rsa.pub user@remote-addr
+
+For security reasons, you can disable password authentication on
+remote server with "passwd -l user".
+
+Usage:
+ usbnet -a ssh -u user -t remote-addr:port <executable>
+
+Example:
+ usbnet -a ssh -u john -t myserver "lsusb"
+
