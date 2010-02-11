@@ -326,7 +326,27 @@ void UsbService::usb_resetep(int fd, Packet &in)
 
 void UsbService::usb_clear_halt(int fd, Packet &in)
 {
-   NOT_IMPLEMENTED
+   Symbol sym(in);
+   int devfd = sym.asInt(); sym.next();
+   int ep = sym.asInt();
+
+   // Find open device
+   int res = -1;
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      usb_dev_handle* h = *i;
+      if(h->fd == devfd) {
+         res = ::usb_clear_halt(h, ep);
+         break;
+      }
+   }
+
+   log_msg("Call: usb_clear_halt(%d, %d) = %d", devfd, ep, res);
+
+   // Return result
+   Packet pkt(UsbClearHalt);
+   pkt.addInt32(res);
+   pkt.send(fd);
 }
 
 void UsbService::usb_reset(int fd, Packet &in)
