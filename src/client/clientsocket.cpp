@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include "clientsocket.hpp"
+#include "common.h"
 #include <sstream>
 #include <iostream>
 #include <cstdio>
@@ -50,9 +51,12 @@ inline std::string to_string (const T& t)
 class ClientSocket::Private
 {
    public:
-   std::string user;
    ClientSocket::Auth method;
+
    pid_t tunnel;
+   std::string tunUser;
+   std::string tunHost;
+   int tunPort;
    int timeout;
 };
 
@@ -62,6 +66,7 @@ ClientSocket::ClientSocket(int fd, Auth method)
    d->method = method;
    d->tunnel = -1;
    d->timeout = 0;
+   d->tunPort = 22;
 }
 
 ClientSocket::~ClientSocket()
@@ -77,9 +82,40 @@ void ClientSocket::setMethod(Auth method) {
    d->method = method;
 }
 
-void ClientSocket::setCredentials(const std::string& user)
+bool ClientSocket::setCredentials(std::string auth)
 {
-   d->user = user;
+   // Prepare
+   d->tunUser.clear();
+   d->tunHost.clear();
+
+
+   // Find username
+   int pos = auth.find('@');
+   if(pos != std::string::npos) {
+      d->tunUser = auth.substr(0, pos);
+      ++pos;
+   }
+   else
+      pos = 0;
+
+   // Find port
+   int hlen = auth.length() - pos;
+   int ppos = auth.find(':');
+   if(ppos != std::string::npos) {
+      std::string port = auth.substr(ppos + 1);
+      hlen -= port.length() + 1;
+      d->tunPort = atoi(port.c_str());
+      if(d->tunPort <= 0 || d->tunPort > 65535) {
+         error_msg("Client: invalid port given: %s", port.c_str());
+         return false;
+      }
+   }
+
+   // Get hostname
+   if(hlen > 0)
+      d->tunHost = auth.substr(pos, hlen);
+
+   return true;
 }
 
 int ClientSocket::timeout()
@@ -103,11 +139,18 @@ int ClientSocket::connect(std::string host, int port)
       // Build command
       std::string cmd("ssh -o PreferredAuthentications=publickey ");
 
-      // Host
-      if(!d->user.empty()) {
-         cmd += d->user + '@';
+      // Username
+      if(!d->tunUser.empty()) {
+         cmd += d->tunUser + '@';
       }
+
+      // Hostname
+      if(d->tunHost.empty()) {
+         d->tunHost = host;
+      }
+
       cmd += host;
+      cmd += " -p " + to_string(d->tunPort);
       cmd += " -T -L "; // Do not allocate TTY, Tunnel mode
 
       // Tunnel options
@@ -123,12 +166,12 @@ int ClientSocket::connect(std::string host, int port)
       port = port + 1;
 
       // Execute
-      printf("Client: creating secure SSH tunnel to %s@%s ...\n", d->user.c_str(), host.c_str());
+      log_msg("Client: creating secure SSH (%s@%s:%d) ...", d->tunUser.c_str(), d->tunHost.c_str(), d->tunPort);
       if((d->tunnel = popen2(cmd.c_str())) < 0)
          return -1;
 
       // Write password
-      printf("Client: created on pid %d\n", d->tunnel);
+      log_msg("Client: created on pid %d", d->tunnel);
       if(d->timeout > 0)
          msleep(d->timeout);
    }

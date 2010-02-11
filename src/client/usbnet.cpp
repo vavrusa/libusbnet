@@ -30,14 +30,13 @@ int main(int argc, char* argv[])
 {
    // Create remote connection
    ClientSocket remote;
-   std::string host("localhost"), user, auth, lib("libusbnet.so"), exec;
+   std::string host("localhost"), auth, lib("libusbnet.so"), exec;
    int port = 22222, pos = 0, timeout = 1000;
 
    // Parse command line arguments
    CmdFlags cmd(argc, argv);
-   cmd.add('h', "host",     "Target hostname and port", "localhost:22222")
-      .add('u', "user",     "Username")
-      .add('a', "auth",     "Authentication method: none, ssh")
+   cmd.add('h', "host",     "Target server host:[port]", "localhost:22222")
+      .add('a', "auth",     "Authentication token user@host[:port]")
       .add('l', "library",  "Preloaded library", "libusbnet.so")
       .add('t', "timeout",  "Connection timeout (ms).", "1000")
       .add('?', "help");
@@ -58,7 +57,6 @@ int main(int argc, char* argv[])
             host.erase(pos);
          }
          break;
-      case 'u': user    = m.second; break;
       case 'a': auth    = m.second; break;
       case 'l': lib     = m.second; break;
       case 't': timeout = atoi(m.second.c_str()); break;
@@ -68,6 +66,8 @@ int main(int argc, char* argv[])
          break;
       case  0 :
          exec = m.second;
+         break;
+      default:
          break;
       }
 
@@ -82,23 +82,19 @@ int main(int argc, char* argv[])
    }
 
    // Authenticate
-   if(auth == "ssh") {
+   if(!auth.empty()) {
       remote.setMethod(ClientSocket::SSH);
-      remote.setCredentials(user);
       remote.setTimeout(timeout);
-   }
-   else {
-
-      // Invalid auth method
-      if(!auth.empty()) {
+      if(!remote.setCredentials(auth)) {
          error_msg("Client: invalid authentication method '%s'", auth.c_str());
          cmd.printHelp();
          return EXIT_FAILURE;
       }
+
    }
 
    // Connect
-   log_msg("Client: connecting to %s:%d ...\n", host.c_str(), port);
+   log_msg("Client: connecting to %s:%d ...", host.c_str(), port);
    if(remote.connect(host.c_str(), port) != Socket::Ok) {
       error_msg("Client: connection failed.");
       remote.close();

@@ -48,7 +48,7 @@ class ClientSocket : public Socket
 
    /** Set credentials for underlying authentication mechanism.
      */
-   void setCredentials(const std::string& user);
+   bool setCredentials(std::string auth);
 
    /** Connection timeout.
      */
