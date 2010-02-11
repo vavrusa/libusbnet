@@ -18,7 +18,6 @@
 ***************************************************************************/
 #ifndef __common_h__
 #define __common_h__
-#include <dlfcn.h>
 #include <string.h>
 
 /** Symbolic constants.
@@ -45,6 +44,25 @@ static const char* filename(const char* path) {
    return ++p;
 }
 
+/** Log message.
+  */
+#ifdef DEBUG
+#define LOG_MSG(msg, args...) \
+fprintf(stdout, format, ## args)
+#else
+#define LOG_MSG(msg, args...)
+#endif
+
+/** Debug message.
+  */
+#ifdef DEBUG
+#define DEBUG_MSG(msg, args...) \
+fprintf(stderr, "%s: ", __func__); \
+fprintf(stderr, msg, ## args)
+#else
+#define DEBUG_MSG(msg, args...)
+#endif
+
 /** Debug macro for marking unimplemented calls.
   */
 #ifdef DEBUG
@@ -62,6 +80,12 @@ static const char* filename(const char* path) {
 #define DEPRECATED
 #endif
 
+/* Deprecated functions / macros.
+ */
+
+#if 0
+#include <dlfcn.h>
+
 /** Load next symbol from linked shared libraries.
   * Return error if not found and exit with error state (1).
   */
@@ -75,6 +99,7 @@ static const char* filename(const char* path) {
       } \
    } \
 }
+#endif
 
 #ifdef __cplusplus
 }
