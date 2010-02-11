@@ -30,8 +30,8 @@ C usb_bulk_write -- Write data to a bulk endpoint
 C usb_bulk_read -- Read data from a bulk endpoint
 
 V. Interrupt Transfers
-  usb_interrupt_write -- Write data to an interrupt endpoint
-  usb_interrupt_read -- Read data from a interrupt endpoint
+A usb_interrupt_write -- Write data to an interrupt endpoint
+A usb_interrupt_read -- Read data from a interrupt endpoint
 
 VI. Non Portable
 N usb_get_driver_np -- Get driver name bound to interface

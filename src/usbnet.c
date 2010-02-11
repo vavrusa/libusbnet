@@ -813,14 +813,76 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
  */
 int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
 {
-   NOT_IMPLEMENTED
-   return -1;
+   // Get remote fd
+   call_lock();
+   int fd = get_remote();
+
+   // Prepare packet
+   packet_t* pkt = pkt_new(size + 128);
+   pkt_init(pkt, UsbInterruptWrite);
+   pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
+   pkt_append(pkt, IntegerType, sizeof(int), &ep);
+   pkt_append(pkt, OctetType,   size,        bytes);
+   pkt_append(pkt, IntegerType, sizeof(int), &timeout);
+   pkt_send(fd, pkt->buf, pkt_size(pkt));
+
+   // Get response
+   int res = -1;
+   if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbInterruptWrite) {
+      sym_t sym;
+      pkt_begin(pkt, &sym);
+      if(sym.type == IntegerType) {
+         res = as_int(sym.val, sym.len);
+         sym_next(&sym);
+      }
+   }
+
+   // Return response
+   pkt_del(pkt);
+   call_release();
+   debug_msg("returned %d", res);
+   return res;
 }
 
 int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
 {
-   NOT_IMPLEMENTED
-   return -1;
+   // Get remote fd
+   call_lock();
+   int fd = get_remote();
+
+   // Prepare packet
+   packet_t* pkt = pkt_new(size + 128);
+   pkt_init(pkt, UsbInterruptRead);
+   pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
+   pkt_append(pkt, IntegerType, sizeof(int), &ep);
+   pkt_append(pkt, IntegerType, sizeof(int), &size);
+   pkt_append(pkt, IntegerType, sizeof(int), &timeout);
+   pkt_send(fd, pkt->buf, pkt_size(pkt));
+
+   // Get response
+   int res = -1;
+   unsigned char op = 0x00;
+   if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbInterruptRead) {
+      op = pkt->buf[0];
+      sym_t sym;
+      pkt_begin(pkt, &sym);
+      if(sym.type == IntegerType) {
+         res = as_int(sym.val, sym.len);
+         sym_next(&sym);
+      }
+      if(sym.type == OctetType) {
+         if(res > 0) {
+            int minlen = (res > size) ? size : res;
+            memcpy(bytes, sym.val, minlen);
+         }
+      }
+   }
+
+   // Return response
+   pkt_del(pkt);
+   call_release();
+   debug_msg("returned %d", res);
+   return res;
 }
 
 /* libusb(6):
