@@ -19,8 +19,8 @@
 
 #include "usbservice.hpp"
 #include "protocol.hpp"
+#include "common.h"
 #include <netinet/tcp.h>
-#include <cstdio>
 
 UsbService::UsbService(int fd)
    : ServerSocket(fd)
@@ -35,7 +35,7 @@ UsbService::~UsbService()
    // Close open devices
    std::list<usb_dev_handle*>::iterator i;
    for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
-      printf("UsbService: closing open device %p.", *i);
+      log_msg("UsbService: closing open device %p", *i);
       ::usb_close(*i);
    }
    mOpenList.clear();
@@ -62,7 +62,7 @@ bool UsbService::handle(int fd, Packet& pkt)
       case UsbBulkRead:    usb_bulk_read(fd, pkt);    break;
       case UsbBulkWrite:   usb_bulk_write(fd, pkt);   break;
       default:
-         fprintf(stderr, "Call:  0x%02x unhandled call type (fd %d).\n", pkt.op(), fd);
+         log_msg("Call: unhandled call type: 0x%02x (fd %d)", pkt.op(), fd);
          return false;
          break;
    }
@@ -73,7 +73,7 @@ bool UsbService::handle(int fd, Packet& pkt)
 void UsbService::usb_init(int fd, Packet& in)
 {
    // Call, no ACK
-   printf("Call: usb_init()\n");
+   log_msg("Call: usb_init()");
    ::usb_init();
 }
 
@@ -82,7 +82,7 @@ void UsbService::usb_find_busses(int fd, Packet& in)
    // Call
    // Can't guarantee correct number in case of multi-client environment
    int res = ::usb_find_busses();
-   printf("Call: usb_find_busses() = %d\n", res);
+   log_msg("Call: usb_find_busses() = %d", res);
 
    // Send result
    Packet pkt(UsbFindBusses);
@@ -94,7 +94,7 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 {
    // WARNING: Can't guarantee correct number in case of multi-client environment
    int res = ::usb_find_devices();
-   printf("Call: usb_find_devices() = %d\n", res);
+   log_msg("Call: usb_find_devices() = %d", res);
 
    // Prepare result packet
    Packet pkt(UsbFindDevices);
@@ -125,7 +125,7 @@ void UsbService::usb_find_devices(int fd, Packet& in)
             TODO: unsigned char num_children;
                   struct usb_device **children;
           */
-         printf("Bus %s Device %s: ID %04x:%04x\n",
+         log_msg("Bus %s Device %s: ID %04x:%04x",
                 bus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
          Block devBlock = block.writeBlock(SequenceType);
          devBlock.addString(dev->filename);
@@ -204,7 +204,7 @@ void UsbService::usb_open(int fd, Packet& in)
    }
 
 
-   printf("Call: usb_open(%u:%u) = %d (fd %d)\n", busid, devid, res, openfd);
+   log_msg("Call: usb_open(%u:%u) = %d (fd %d)", busid, devid, res, openfd);
 
    // Return result
    Packet pkt(UsbOpen);
@@ -230,7 +230,7 @@ void UsbService::usb_close(int fd, Packet& in)
       }
    }
 
-   printf("Call: usb_close(%d) = %d\n", devfd, res);
+   log_msg("Call: usb_close(%d) = %d", devfd, res);
 
    // Return result
    Packet pkt(UsbClose);
@@ -256,7 +256,7 @@ void UsbService::usb_claim_interface(int fd, Packet &in)
       }
    }
 
-   printf("Call: usb_claim_interface(%d) = %d\n", devfd, res);
+   log_msg("Call: usb_claim_interface(%d) = %d", devfd, res);
 
    // Return result
    Packet pkt(UsbClaimInterface);
@@ -283,7 +283,7 @@ void UsbService::usb_release_interface(int fd, Packet &in)
       }
    }
 
-   printf("Call: usb_release_interface(%d) = %d\n", devfd, res);
+   log_msg("Call: usb_release_interface(%d) = %d", devfd, res);
 
    // Return result
    Packet pkt(UsbReleaseInterface);
@@ -312,7 +312,7 @@ void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
       }
    }
 
-   printf("Call: usb_detach_kernel_driver_np(%d, %d) = %d\n", devfd, index, res);
+   log_msg("Call: usb_detach_kernel_driver_np(%d, %d) = %d", devfd, index, res);
 
    // Return result
    Packet pkt(UsbDetachKernelDriver);
@@ -350,7 +350,7 @@ void UsbService::usb_control_msg(int fd, Packet& in)
       int timeout = sym.asInt();
 
       res = ::usb_control_msg(h, reqtype, request, value, index, data, size, timeout);
-      printf("Call: usb_control_msg(%d) = %d\n", devfd, res);
+      log_msg("Call: usb_control_msg(%d) = %d", devfd, res);
    }
 
    // Return packet
@@ -386,7 +386,7 @@ void UsbService::usb_bulk_read(int fd, Packet &in)
       // Call function
       data = new char[size];
       res = ::usb_bulk_read(h, ep, data, size, timeout);
-      printf("Call: usb_bulk_read(%d) = %d\n", devfd, res);
+      log_msg("Call: usb_bulk_read(%d) = %d", devfd, res);
    }
 
    // Return packet
@@ -425,7 +425,7 @@ void UsbService::usb_bulk_write(int fd, Packet &in)
 
       // Call function
       res = ::usb_bulk_write(h, ep, data, size, timeout);
-      printf("Call: usb_bulk_write(%d) = %d\n", devfd, res);
+      log_msg("Call: usb_bulk_write(%d) = %d", devfd, res);
    }
 
    // Return packet

@@ -91,38 +91,34 @@ int main(int argc, char* argv[])
 
       // Invalid auth method
       if(!auth.empty()) {
-         fprintf(stderr, "Client: invalid authentication method '%s'\n", auth.c_str());
+         error_msg("Client: invalid authentication method '%s'", auth.c_str());
          cmd.printHelp();
          return EXIT_FAILURE;
       }
    }
 
    // Connect
-      printf("Client: connecting to %s:%d ...\n", host.c_str(), port);
+   log_msg("Client: connecting to %s:%d ...\n", host.c_str(), port);
    if(remote.connect(host.c_str(), port) != Socket::Ok) {
-      printf("Client: connection failed.\n");
+      error_msg("Client: connection failed.");
       remote.close();
       return EXIT_FAILURE;
    }
 
    // Disable TCP buffering
    int flag = 1;
-   if(setsockopt(remote.sock(), IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int)) < 0) {
-      printf("Client: connection failed.\n");
-      remote.close();
-      return EXIT_FAILURE;
-   }
+   setsockopt(remote.sock(), IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
 
    // Create SHM segment
    int shm_id = 0;
-   printf("IPC: creating segment at key 0x%x (%d bytes)\n", SHM_KEY, SHM_SIZE);
+   log_msg("IPC: creating segment at key 0x%x (%d bytes)", SHM_KEY, SHM_SIZE);
    if((shm_id = shmget(SHM_KEY, SHM_SIZE, IPC_CREAT|0666)) == -1) {
       perror("shmget");
       return EXIT_FAILURE;
    }
 
    // Attach segment and save fd
-   printf("IPC: attaching segment %d\n", shm_id);
+   log_msg("IPC: attaching segment %d", shm_id);
    void* shm_addr = NULL;
    if ((shm_addr = shmat(shm_id, NULL, 0)) == (void *) -1) {
       perror("shmat");
@@ -132,10 +128,10 @@ int main(int argc, char* argv[])
    // Save fd
    int* shm = (int*) shm_addr;
    *shm = remote.sock();
-   printf("IPC: socket %d is stored in %d (mapped to %p)\n", remote.sock(), shm_id, shm);
+   log_msg("IPC: socket %d is stored in %d (mapped to %p)", remote.sock(), shm_id, shm);
 
    // Detach segment
-   printf("IPC: detaching segment %d\n", shm_id);
+   log_msg("IPC: detaching segment %d", shm_id);
    if(shmdt(shm_addr) != 0) {
       perror("shmdt");
       return EXIT_FAILURE;
@@ -146,13 +142,17 @@ int main(int argc, char* argv[])
    execs.append(lib);
    execs.append("\" ");
    execs.append(exec);
-   printf("Executing: %s\n", execs.c_str());
+   log_msg("Executing: %s", execs.c_str());
+   std::string fill = "Executing: " + execs;
+   fill = std::string(fill.length(), '-');
+   log_msg(fill.c_str());
 
    int ret = system(execs.c_str());
-   printf("IPC: executable returned %d\n", ret);
+   log_msg(fill.c_str());
+   log_msg("IPC: executable returned %d", ret);
 
    // Delete segment
-   printf("IPC: removing segment %d\n", shm_id);
+   log_msg("IPC: removing segment %d", shm_id);
    shmctl(shm_id, IPC_RMID, NULL);
 
    // Close socket

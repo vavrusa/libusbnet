@@ -18,9 +18,8 @@
  ***************************************************************************/
 
 #include "serversocket.hpp"
-#include <iostream>
+#include "common.h"
 #include <sys/poll.h>
-using std::cout;
 
 class ServerSocket::Private
 {
@@ -40,7 +39,7 @@ ServerSocket::~ServerSocket()
 
 void ServerSocket::run()
 {
-   cout << "Running server at " << host() << ":" << port() << " ...\n";
+   log_msg("Server: running at %s:%d", host().c_str(), port());
 
    // Append self to clients vector
    std::vector<pollfd>::iterator it;
@@ -56,7 +55,7 @@ void ServerSocket::run()
       // Evaluate incoming sockets
       if(!incoming.empty()) {
          for(it = incoming.begin(); it != incoming.end(); ++it) {
-            cout << "Connected (fd " << it->fd << ").\n";
+            log_msg("Server: client connected (fd %d)", it->fd);
             d->clients.push_back(*it);
          }
          incoming.clear();
@@ -93,7 +92,7 @@ void ServerSocket::run()
 
             // Disconnect
             if(it->revents & POLLHUP) {
-               cout << "Disconnected (fd " << it->fd << ").\n";
+               log_msg("Server:  client disconnected (fd %d)", it->fd);
                d->clients.erase(it);
                it = d->clients.begin();
                continue;
@@ -103,7 +102,7 @@ void ServerSocket::run()
    }
 
    // Stop server
-   cout << "Stopping server.\n";
+   log_msg("Server: stopped");
 }
 
 bool ServerSocket::read(int fd)
@@ -112,7 +111,6 @@ bool ServerSocket::read(int fd)
 
    // Read packet
    if(pkt.recv(fd) < 0) {
-      cout << "Error when reading data (fd " << fd << ").\n";
       return false;
    }
 

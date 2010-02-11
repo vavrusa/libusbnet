@@ -100,10 +100,6 @@ static int get_remote() {
 
 void usb_init(void)
 {
-   // Locate original symbol
-   //static int (*func)(void) = NULL;
-   //READ_SYM(func, __func__)
-
    // Initialize remote fd
    call_lock();
    int fd = get_remote();
@@ -116,7 +112,7 @@ void usb_init(void)
    call_release();
 
    // Initialize locally
-   printf("%s: called\n", __func__);
+   debug_msg("called");
 }
 
 int usb_find_busses(void)
@@ -144,7 +140,7 @@ int usb_find_busses(void)
 
    // Return remote result
    call_release();
-   printf("%s: returned %d\n", __func__, res);
+   debug_msg("returned %d", res);
    return res;
 }
 
@@ -323,20 +319,20 @@ int usb_find_devices(void)
                   sym_next(&sym);
                }
 
-              printf("Bus %s Device %s: ID %04x:%04x\n", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
+              log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
             }
 
             // Free unused devices
             while(dev->next != NULL) {
                struct usb_device* ddev = dev->next;
-               printf("%s: deleting device %03d\n", __func__, ddev->devnum);
+               debug_msg("deleting device %03d", ddev->devnum);
                dev->next = ddev->next;
                free(ddev);
             }
 
          }
          else {
-            printf("%s: unexpected symbol 0x%02x\n", __func__, sym.type);
+            debug_msg("unexpected symbol 0x%02x", sym.type);
             sym_next(&sym);
          }
 
@@ -347,7 +343,7 @@ int usb_find_devices(void)
 
       // Deallocate unnecessary busses
       while(rbus->next != NULL) {
-         printf("%s: deleting bus %03d\n", __func__, rbus->next->location);
+         debug_msg("deleting bus %03d", rbus->next->location);
          struct usb_bus* bus = rbus->next;
          rbus->next = bus->next;
          free(bus);
@@ -357,20 +353,20 @@ int usb_find_devices(void)
       __remote_bus = vbus.next;
 
       // Override original variable
-      printf("%s: overriding global usb_busses on %p\n", __func__, usb_busses);
+      debug_msg("overriding global usb_busses on %p", usb_busses);
       usb_busses = __remote_bus;
    }
 
    // Return remote result
    call_release();
-   printf("%s: returned %d\n", __func__, res);
+   debug_msg("returned %d", res);
    return res;
 }
 
 struct usb_bus* usb_get_busses(void)
 {
    // TODO: merge both Local/Remote bus in future
-   printf("%s: returned %p\n", __func__, __remote_bus);
+   debug_msg("returned %p", __remote_bus);
    return __remote_bus;
 }
 
@@ -417,7 +413,7 @@ usb_dev_handle *usb_open(struct usb_device *dev)
    }
 
    call_release();
-   printf("%s: returned %d (on fd %d)\n", __func__, res, devfd);
+   debug_msg("returned %d (fd %d)", res, devfd);
    return udev;
 }
 
@@ -448,7 +444,7 @@ int usb_close(usb_dev_handle *dev)
    }
 
    call_release();
-   printf("%s: returned %d\n", __func__, res);
+   debug_msg("returned %", res);
    return res;
 }
 
@@ -536,7 +532,7 @@ int usb_release_interface(usb_dev_handle *dev, int interface)
    }
 
    call_release();
-   printf("%s: returned %d\n", __func__, res);
+   debug_msg("returned %d", res);
    return res;
 }
 
@@ -583,7 +579,7 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
    // Return response
    pkt_del(pkt);
    call_release();
-   printf("%s: returned %d\n", __func__, res);
+   debug_msg("returned %d", res);
    return res;
 }
 
@@ -628,7 +624,7 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
    // Return response
    pkt_del(pkt);
    call_release();
-   printf("%s: returned %d (op 0x%02x)\n", __func__, res, op);
+   debug_msg("returned %d", res);
    return res;
 }
 
@@ -661,7 +657,7 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
    // Return response
    pkt_del(pkt);
    call_release();
-   printf("%s: returned %d\n", __func__, res);
+   debug_msg("returned %d", res);
    return res;
 }
 
@@ -709,7 +705,7 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
    }
 
    call_release();
-   printf("%s: returned %d\n", __func__, res);
+   debug_msg("returned %d", res);
    return res;
 
 }

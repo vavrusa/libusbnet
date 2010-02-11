@@ -19,6 +19,7 @@
 #ifndef __common_h__
 #define __common_h__
 #include <string.h>
+#include <stdio.h>
 
 /** Symbolic constants.
   */
@@ -47,27 +48,36 @@ static const char* filename(const char* path) {
 /** Log message.
   */
 #ifdef DEBUG
-#define LOG_MSG(msg, args...) \
-fprintf(stdout, format, ## args)
+#define log_msg(fmt, args...) \
+printf(fmt, ## args); \
+printf("\n")
 #else
-#define LOG_MSG(msg, args...)
+#define log_msg(fmt, args...)
 #endif
+
+/** Error message.
+  */
+#define error_msg(fmt, args...) \
+fprintf(stderr, fmt, ## args); \
+fprintf(stderr, "\n")
 
 /** Debug message.
   */
 #ifdef DEBUG
-#define DEBUG_MSG(msg, args...) \
+#define debug_msg(fmt, args...) \
 fprintf(stderr, "%s: ", __func__); \
-fprintf(stderr, msg, ## args)
+fprintf(stderr, fmt, ## args); \
+fprintf(stderr, "\n")
+
 #else
-#define DEBUG_MSG(msg, args...)
+#define debug_msg(fmt, args...)
 #endif
 
 /** Debug macro for marking unimplemented calls.
   */
 #ifdef DEBUG
 #define NOT_IMPLEMENTED \
-   fprintf(stderr, "[!!] %s:%d: function '%s' not implemented\n", filename(__FILE__), __LINE__, __func__);
+   debug_msg("function not implemented (%s:%d)", filename(__FILE__), __LINE__);
 #else
 #define NOT_IMPLEMENTED
 #endif
