@@ -11,7 +11,7 @@ II. Device operations
 C usb_open -- Opens a USB device
 C usb_close -- Closes a USB device
 C usb_set_configuration -- Sets the active configuration of a device
-  usb_set_altinterface -- Sets the active alternate setting of the current interface
+C usb_set_altinterface -- Sets the active alternate setting of the current interface
   usb_resetep -- Resets state for an endpoint
   usb_clear_halt -- Clears any halt status on an endpoint
   usb_reset -- Resets a device

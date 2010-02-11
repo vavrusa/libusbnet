@@ -266,7 +266,7 @@ void UsbService::usb_set_configuration(int fd, Packet &in)
    log_msg("Call: usb_set_configuration(%d, %d) = %d", devfd, configuration, res);
 
    // Return result
-   Packet pkt(UsbClose);
+   Packet pkt(UsbSetConfiguration);
    pkt.addInt32(res);
    pkt.addInt32(configuration);
    pkt.send(fd);
@@ -274,7 +274,29 @@ void UsbService::usb_set_configuration(int fd, Packet &in)
 
 void UsbService::usb_set_altinterface(int fd, Packet &in)
 {
-   NOT_IMPLEMENTED
+   Symbol sym(in);
+   int devfd = sym.asInt(); sym.next();
+   int alternate = sym.asInt();
+
+   // Find open device
+   int res = -1;
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      usb_dev_handle* h = *i;
+      if(h->fd == devfd) {
+         res = ::usb_set_altinterface(h, alternate);
+         alternate = h->altsetting;
+         break;
+      }
+   }
+
+   log_msg("Call: usb_set_altinterface(%d, %d) = %d", devfd, alternate, res);
+
+   // Return result
+   Packet pkt(UsbSetAltInterface);
+   pkt.addInt32(res);
+   pkt.addInt32(alternate);
+   pkt.send(fd);
 }
 
 void UsbService::usb_resetep(int fd, Packet &in)
