@@ -241,6 +241,82 @@ int usb_find_devices(void)
                   sym_next(&sym);
                }
 
+               // Read config
+               if(sym.type == RawType) {
+
+                  // Ensure struct under/overlap
+                  int szlen = sizeof(struct usb_config_descriptor);
+                  if(szlen > sym.len)
+                     szlen = sym.len;
+
+                  dev->config = malloc(sizeof(struct usb_config_descriptor));
+                  memcpy(dev->config, sym.val, szlen);
+
+                  // Allocate interfaces
+                  dev->config->interface = NULL;
+                  if(dev->config->bNumInterfaces > 0) {
+                     dev->config->interface = malloc(dev->config->bNumInterfaces * sizeof(struct usb_interface));
+                  }
+
+                  // TODO: extra interfaces
+                  dev->config->extralen = 0;
+                  dev->config->extra = NULL;
+
+                  sym_next(&sym);
+               }
+
+               // Load interfaces
+               unsigned i, j, k;
+               for(i = 0; i < dev->config->bNumInterfaces; ++i) {
+                  struct usb_interface* iface = &dev->config->interface[i];
+
+                  // Read altsettings count
+                  iface->num_altsetting = as_int(sym.val, sym.len);
+                  sym_next(&sym);
+
+                  // Allocate altsettings
+                  if(iface->num_altsetting > 0) {
+                     iface->altsetting = malloc(iface->num_altsetting * sizeof(struct usb_interface_descriptor));
+                  }
+
+                  // Load altsettings
+                  for(j = 0; j < iface->num_altsetting; ++j) {
+
+                     // Ensure struct under/overlap
+                     struct usb_interface_descriptor* altsetting = &iface->altsetting[j];
+                     int szlen = sizeof(struct usb_interface_descriptor);
+                     if(szlen > sym.len)
+                        szlen = sym.len;
+
+                     memcpy(altsetting, sym.val, szlen);
+                     sym_next(&sym);
+
+                     // Allocate endpoints
+                     if(altsetting->bNumEndpoints > 0) {
+                        altsetting->endpoint = malloc(altsetting->bNumEndpoints * sizeof(struct usb_endpoint_descriptor));
+                     }
+
+                     // Load endpoints
+                     for(k = 0; k < altsetting->bNumEndpoints; ++k) {
+                        struct usb_endpoint_descriptor* endpoint = &altsetting->endpoint[k];
+                        int szlen = sizeof(struct usb_endpoint_descriptor);
+                        if(szlen > sym.len)
+                           szlen = sym.len;
+
+                        memcpy(endpoint, sym.val, szlen);
+                        sym_next(&sym);
+
+                        // TODO: extra descriptors
+                        endpoint->extralen = 0;
+                        endpoint->extra = NULL;
+                     }
+
+                     // TODO: extra interfaces
+                     altsetting->extralen = 0;
+                     altsetting->extra = NULL;
+                  }
+               }
+
                // Read devnum
                if(sym.type == IntegerType) {
                   dev->devnum = as_int(sym.val, sym.len);

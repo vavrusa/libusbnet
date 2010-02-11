@@ -130,7 +130,26 @@ void UsbService::usb_find_devices(int fd, Packet& in)
          Block devBlock = block.writeBlock(SequenceType);
          devBlock.addString(dev->filename);
          devBlock.addData((const char*) &(dev->descriptor), sizeof(struct usb_device_descriptor));
-         //devBlock.addData((const char*) dev->config, sizeof(struct usb_config_descriptor));
+         devBlock.addData((const char*) dev->config, sizeof(struct usb_config_descriptor));
+
+         // Add interfaces
+         for(unsigned i = 0; i < dev->config->bNumInterfaces; ++i) {
+            struct usb_interface* iface = &dev->config->interface[i];
+            devBlock.addInt32(iface->num_altsetting);
+
+            // Add interface settings
+            for(unsigned j = 0; j < iface->num_altsetting; ++j) {
+               struct usb_interface_descriptor* altsetting = &iface->altsetting[j];
+               devBlock.addData((const char*) altsetting, sizeof(struct usb_interface_descriptor));
+
+               // Add endpoints
+               for(unsigned k = 0; k < altsetting->bNumEndpoints; ++k) {
+                  struct usb_endpoint_descriptor* endpoint = &altsetting->endpoint[k];
+                  devBlock.addData((const char*) endpoint, sizeof(struct usb_endpoint_descriptor));
+               }
+            }
+         }
+
          devBlock.addUInt8(dev->devnum);
          devBlock.finalize();
       }
