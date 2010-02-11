@@ -21,14 +21,50 @@
 #ifndef __clientsocket_hpp__
 #define __clientsocket_hpp__
 #include "socket.hpp"
+#include <string>
 
 /** Client socket reimplementation. */
 class ClientSocket : public Socket
 {
    public:
 
-   ClientSocket(int fd = -1);
+   /** Authentication methods.
+     */
+   enum Auth {
+      None = 0,
+      SSH,
+   };
+
+   ClientSocket(int fd = -1, Auth method = None);
    ~ClientSocket();
+
+   /** Return used authentication method.
+     */
+   Auth method();
+
+   /** Set authentication mechanism.
+     */
+   void setMethod(Auth method);
+
+   /** Set credentials for underlying authentication mechanism.
+     */
+   void setCredentials(const std::string& user);
+
+   /** Connection timeout.
+     */
+   int timeout();
+
+   /** Set connection timeout.
+     */
+   void setTimeout(int ms);
+
+   /** Overload connect method.
+     */
+   int connect(std::string host, int port);
+
+   /** Overload close method.
+     */
+   int close();
 
    private:
 

@@ -47,7 +47,7 @@ int Socket::create()
    return 0;
 }
 
-int Socket::connect(const std::string& host, int port)
+int Socket::connect(std::string host, int port)
 {
    // Ignore multiple connect
    if(isOpen())

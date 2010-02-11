@@ -34,7 +34,7 @@ class Socket
    virtual ~Socket();
 
    // Connect to remote host:port
-   int connect(const std::string& host, int port);
+   int connect(std::string host, int port);
 
    // Listen on given port
    int listen(int port, int limit = 5);
