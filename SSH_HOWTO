@@ -25,8 +25,11 @@ Using SSH tunneling on client
 -----------------------------
 
 Usage:
- usbnet -a ssh -u user -t remote-addr:port <executable>
+ usbnet -a user[@host][:port] <executable>
 
-Example:
- usbnet -a ssh -u john -t myserver "lsusb"
+Example: Connect to myserver's usbexportd using SSH tunnel.
+ usbnet -a john@myserver "lsusb"
+
+Example: Tunnel to myserver, and reach usbexportd on myserver2 from myserver.
+ usbnet -a john@myserver:10000 -h myserver2 "lsusb"
 
