@@ -10,8 +10,19 @@ To use it, you have to generate your SSH key pair and copy it to server.
 2. Copy your public key to remote server
  ssh-copy-id -i ~/.ssh/id_rsa.pub user@remote-addr
 
-For security reasons, you can disable password authentication on
+Securing server access
+----------------------
+
+To disallow open connections from remote clients, simply block
+server port in your firewall or bind server to localhost only.
+
+Tunnelled connections will appear as local to server.
+
+For security reasons, you can also disable password authentication on
 remote server with "passwd -l user".
+
+Using SSH tunneling on client
+-----------------------------
 
 Usage:
  usbnet -a ssh -u user -t remote-addr:port <executable>
