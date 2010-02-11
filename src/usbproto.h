@@ -22,7 +22,8 @@
 
 #include "protocol.h"
 
-// Calls
+/* Call opcodes.
+ */
 typedef enum {
    NullRequest           = CallType,       // ping
    UsbInit               = CallType  +  1, // usb_init()
@@ -36,7 +37,15 @@ typedef enum {
    UsbReleaseInterface   = CallType  +  9, // int usb_release_interface()
    UsbDetachKernelDriver = CallType  + 10, // int usb_detach_kernel_driver()
    UsbBulkRead           = CallType  + 11, // int usb_bulk_read()
-   UsbBulkWrite          = CallType  + 12  // int usb_bulk_write()
+   UsbBulkWrite          = CallType  + 12, // int usb_bulk_write()
+   UsbSetConfiguration   = CallType  + 13, // int usb_set_configuration()
+   UsbSetAltInterface    = CallType  + 14, // int usb_set_altinterface()
+   UsbResetEp            = CallType  + 15, // int usb_resetep()
+   UsbClearHalt          = CallType  + 16, // int usb_clear_halt()
+   UsbReset              = CallType  + 17, // int usb_reset()
+   UsbInterruptRead      = CallType  + 18, // int usb_interrupt_read()
+   UsbInterruptWrite     = CallType  + 19  // int usb_interrupt_write()
+
 } Call;
 
 #endif // __libusbproto_h__

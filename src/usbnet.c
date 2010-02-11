@@ -450,8 +450,43 @@ int usb_close(usb_dev_handle *dev)
 
 int usb_set_configuration(usb_dev_handle *dev, int configuration)
 {
-   NOT_IMPLEMENTED
-   return 0;
+   // Get remote fd
+   call_lock();
+   int fd = get_remote();
+
+   // Prepare packet
+   char buf[255];
+   packet_t pkt = pkt_create(buf, 255);
+   pkt_init(&pkt, UsbSetConfiguration);
+   pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
+   pkt_append(&pkt, IntegerType, sizeof(int), &configuration);
+   pkt_send(fd, pkt.buf, pkt_size(&pkt));
+
+   // Get response
+   int res = -1;
+   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbSetConfiguration) {
+      sym_t sym;
+      pkt_begin(&pkt, &sym);
+
+      // Read result
+      if(sym.type == IntegerType) {
+         res = as_int(sym.val, sym.len);
+         sym_next(&sym);
+      }
+
+      // Read callback configuration
+      if(sym.type == IntegerType) {
+         configuration = as_int(sym.val, sym.len);
+      }
+   }
+
+   // Save configuration
+   dev->config = configuration;
+
+   // Return response
+   call_release();
+   debug_msg("returned %d", res);
+   return res;
 }
 
 int usb_set_altinterface(usb_dev_handle *dev, int alternate)
