@@ -564,8 +564,34 @@ int usb_resetep(usb_dev_handle *dev, unsigned int ep)
 
 int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
 {
-   NOT_IMPLEMENTED
-   return 0;
+   // Get remote fd
+   call_lock();
+   int fd = get_remote();
+
+   // Prepare packet
+   char buf[255];
+   packet_t pkt = pkt_create(buf, 255);
+   pkt_init(&pkt, UsbClearHalt);
+   pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
+   pkt_append(&pkt, IntegerType, sizeof(int), &ep);
+   pkt_send(fd, pkt.buf, pkt_size(&pkt));
+
+   // Get response
+   int res = -1;
+   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbClearHalt) {
+      sym_t sym;
+      pkt_begin(&pkt, &sym);
+
+      // Read result
+      if(sym.type == IntegerType) {
+         res = as_int(sym.val, sym.len);
+      }
+   }
+
+   // Return response
+   call_release();
+   debug_msg("returned %d", res);
+   return res;
 }
 
 int usb_reset(usb_dev_handle *dev)
