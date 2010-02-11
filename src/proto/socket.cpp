@@ -22,6 +22,7 @@
 #include <iostream>
 #include <sstream>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 using namespace std;
 
@@ -88,14 +89,14 @@ int Socket::send(const char* buf, size_t size)
    return sent;
 }
 
-int Socket::listen(int port, int limit)
+int Socket::listen(int port, int addr, int limit)
 {
    // Create socket
    if(create() < 0)
       return IOError;
 
    // Bind to given port
-   if(bind(port) < 0)
+   if(bind(port, addr) < 0)
       return IOError;
 
    // Listen
@@ -114,12 +115,16 @@ int Socket::accept()
    return client;
 }
 
-int Socket::bind(int port)
+int Socket::bind(int port, int addr)
 {
    // Create address
    mAddr.sin_family = AF_INET; // Addr type
    mAddr.sin_port = htons(port); // Set port
    mAddr.sin_addr.s_addr = INADDR_ANY; // First available addr
+
+   // Localhost only
+   if(addr == Local)
+      mAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
    if(::bind(mSock, (sockaddr*) &mAddr, sizeof(mAddr)) < 0)
       return -1;

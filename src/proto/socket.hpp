@@ -33,11 +33,29 @@ class Socket
    Socket(int fd = -1);
    virtual ~Socket();
 
+   // Error enumeration
+   enum {
+      IOError        = -128,
+      BadAddr,
+      ConnectError,
+      CloseError,
+      SendError,
+      RecvError,
+      NotOpen,
+      Ok             = 0
+   } State;
+
+   // Address enumeration
+   enum {
+      Local,
+      All
+   } Addr;
+
    // Connect to remote host:port
    int connect(std::string host, int port);
 
    // Listen on given port
-   int listen(int port, int limit = 5);
+   int listen(int port, int addr = All, int limit = 5);
 
    // Accept new connection
    int accept();
@@ -68,25 +86,13 @@ class Socket
    // Return address as struct
    sockaddr_in& addr() { return mAddr; }
 
-   // Error enumeration
-   enum {
-      IOError        = -128,
-      BadAddr,
-      ConnectError,
-      CloseError,
-      SendError,
-      RecvError,
-      NotOpen,
-      Ok             = 0
-   };
-
    protected:
 
    // Create TCP sockets
    int create();
 
    // Bind to port
-   int bind(int port);
+   int bind(int port, int addr = All);
 
    private:
 

@@ -8,6 +8,7 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
 set(sources   usbexportd.cpp
               usbservice.cpp
               serversocket.cpp
+              ${SHARED_DIR}/cmdflags.cpp
               )
 set(headers   serversocket.hpp
               usbservice.hpp
