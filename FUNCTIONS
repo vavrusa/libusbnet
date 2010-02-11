@@ -14,7 +14,7 @@ C usb_set_configuration -- Sets the active configuration of a device
 C usb_set_altinterface -- Sets the active alternate setting of the current interface
 C usb_resetep -- Resets state for an endpoint
 C usb_clear_halt -- Clears any halt status on an endpoint
-  usb_reset -- Resets a device
+C usb_reset -- Resets a device
 C usb_claim_interface -- Claim an interface of a device
 C usb_release_interface -- Releases a previously claimed interface
 
@@ -34,5 +34,5 @@ V. Interrupt Transfers
   usb_interrupt_read -- Read data from a interrupt endpoint
 
 VI. Non Portable
-  usb_get_driver_np -- Get driver name bound to interface
+N usb_get_driver_np -- Get driver name bound to interface
 C usb_detach_kernel_driver_np -- Detach kernel driver from interface
