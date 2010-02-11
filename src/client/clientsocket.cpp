@@ -149,7 +149,7 @@ int ClientSocket::connect(std::string host, int port)
          d->tunHost = host;
       }
 
-      cmd += host;
+      cmd += d->tunHost;
       cmd += " -p " + to_string(d->tunPort);
       cmd += " -T -L "; // Do not allocate TTY, Tunnel mode
 

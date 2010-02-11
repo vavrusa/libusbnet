@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include "cmdflags.hpp"
+#include "common.h"
 #include <cstdio>
 #include <cstring>
 
@@ -54,14 +55,23 @@ CmdFlags::Match CmdFlags::getopt() {
 
       // Check match
       if(m.first < 0) {
-         fprintf(stderr, "getopt(): invalid parameter '%s'\n", pin);
+         error_msg("getopt(): invalid parameter '%s'", pin);
       }
 
       // Add value to valid parameter
-      if(mPos < mArgs.size())
+      if(mPos < mArgs.size()) {
          m.second = mArgs[mPos];
+         if(m.second[0] == '-') {
+            error_msg("getopt(): '%s', missing value", pin);
+            m.second = "";
+         }
+         else {
+            ++mPos;
+         }
+      }
 
-      ++mPos;
+
+
    }
    else {
       m.first = 0;
