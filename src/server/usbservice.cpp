@@ -247,7 +247,29 @@ void UsbService::usb_close(int fd, Packet& in)
 
 void UsbService::usb_set_configuration(int fd, Packet &in)
 {
-   NOT_IMPLEMENTED
+   Symbol sym(in);
+   int devfd = sym.asInt(); sym.next();
+   int configuration = sym.asInt();
+
+   // Find open device
+   int res = -1;
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      usb_dev_handle* h = *i;
+      if(h->fd == devfd) {
+         res = ::usb_set_configuration(h, configuration);
+         configuration = h->config;
+         break;
+      }
+   }
+
+   log_msg("Call: usb_set_configuration(%d, %d) = %d", devfd, configuration, res);
+
+   // Return result
+   Packet pkt(UsbClose);
+   pkt.addInt32(res);
+   pkt.addInt32(configuration);
+   pkt.send(fd);
 }
 
 void UsbService::usb_set_altinterface(int fd, Packet &in)
