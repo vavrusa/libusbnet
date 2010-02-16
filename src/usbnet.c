@@ -29,10 +29,13 @@
 #include "common.h"
 #include <netinet/in.h>
 
-// Global call lock
-// TODO: make more efficient call exclusion
-static pthread_mutex_t __mutex = PTHREAD_MUTEX_INITIALIZER;
+/* Imported from libusb-0.1/descriptors.c
+ */
+static void usb_destroy_configuration(struct usb_device *dev);
 
+/* Call serialization.
+ */
+static pthread_mutex_t __mutex = PTHREAD_MUTEX_INITIALIZER;
 static void call_lock() {
    pthread_mutex_lock(&__mutex);
 }
@@ -48,8 +51,49 @@ static int __remote_fd = -1;
 static struct usb_bus* __remote_bus = 0;
 extern struct usb_bus* usb_busses;
 
+/* Global variables manipulators.
+ */
+void deinit_hostfd() {
+   debug_msg("freeing busses ...");
+
+   // Unhook global variable
+   usb_busses = 0;
+
+   // Free busses
+   struct usb_bus* cur = NULL;
+   while(__remote_bus != NULL) {
+
+      // Shift bus ptr
+      cur = __remote_bus;
+      __remote_bus = cur->next;
+
+      // Free bus devices
+      struct usb_device* dev = NULL;
+      while(cur->devices != NULL) {
+         dev = cur->devices;
+         cur->devices = dev->next;
+
+         // Destroy configuration and free device
+         usb_destroy_configuration(dev);
+         if(dev->children != NULL)
+            free(dev->children);
+         free(dev);
+      }
+
+      // Free bus
+      free(cur);
+   }
+}
+
 // Return remote filedescriptor
-static int get_remote() {
+static int init_hostfd() {
+
+   // Check exit function
+   static char exitf_hooked = 0;
+   if(!exitf_hooked) {
+      atexit(&deinit_hostfd);
+      exitf_hooked = 1;
+   }
 
    // Check fd
    if(__remote_fd == -1) {
@@ -102,7 +146,7 @@ void usb_init(void)
 {
    // Initialize remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Create buffer
    char buf[PACKET_MINSIZE];
@@ -119,7 +163,7 @@ int usb_find_busses(void)
 {
   // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Create buffer
    char buf[32];
@@ -148,7 +192,7 @@ int usb_find_devices(void)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Create buffer
    char buf[4096];
@@ -346,7 +390,6 @@ int usb_find_devices(void)
          debug_msg("deleting bus %03d", rbus->next->location);
          struct usb_bus* bus = rbus->next;
          rbus->next = bus->next;
-         free(bus);
       }
 
       // Save busses
@@ -378,7 +421,7 @@ usb_dev_handle *usb_open(struct usb_device *dev)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Send packet
    char buf[255];
@@ -421,7 +464,7 @@ int usb_close(usb_dev_handle *dev)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Send packet
    char buf[255];
@@ -452,7 +495,7 @@ int usb_set_configuration(usb_dev_handle *dev, int configuration)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Prepare packet
    char buf[255];
@@ -493,7 +536,7 @@ int usb_set_altinterface(usb_dev_handle *dev, int alternate)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Prepare packet
    char buf[255];
@@ -534,7 +577,7 @@ int usb_resetep(usb_dev_handle *dev, unsigned int ep)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Prepare packet
    char buf[255];
@@ -566,7 +609,7 @@ int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Prepare packet
    char buf[255];
@@ -598,7 +641,7 @@ int usb_reset(usb_dev_handle *dev)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Prepare packet
    char buf[255];
@@ -629,7 +672,7 @@ int usb_claim_interface(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Send packet
    char buf[255];
@@ -658,7 +701,7 @@ int usb_release_interface(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Send packet
    char buf[255];
@@ -692,7 +735,7 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Prepare packet
    packet_t* pkt = pkt_new(size + 128);
@@ -738,7 +781,7 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Prepare packet
    packet_t* pkt = pkt_new(size + 128);
@@ -779,7 +822,7 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Prepare packet
    packet_t* pkt = pkt_new(size + 128);
@@ -815,7 +858,7 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes, int size, int 
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Prepare packet
    packet_t* pkt = pkt_new(size + 128);
@@ -848,7 +891,7 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Prepare packet
    packet_t* pkt = pkt_new(size + 128);
@@ -893,7 +936,7 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
    call_lock();
-   int fd = get_remote();
+   int fd = init_hostfd();
 
    // Send packet
    char buf[255];
@@ -978,4 +1021,48 @@ int usb_get_string_simple(usb_dev_handle *dev, int index, char *buf, size_t bufl
   buf[di] = 0;
 
   return di;
+}
+
+static void usb_destroy_configuration(struct usb_device *dev)
+{
+  int c, i, j, k;
+
+  if (!dev->config)
+    return;
+
+  for (c = 0; c < dev->descriptor.bNumConfigurations; c++) {
+    struct usb_config_descriptor *cf = &dev->config[c];
+
+    if (!cf->interface)
+      continue;
+
+    for (i = 0; i < cf->bNumInterfaces; i++) {
+      struct usb_interface *ifp = &cf->interface[i];
+
+      if (!ifp->altsetting)
+        continue;
+
+      for (j = 0; j < ifp->num_altsetting; j++) {
+        struct usb_interface_descriptor *as = &ifp->altsetting[j];
+
+        if (as->extra)
+          free(as->extra);
+
+        if (!as->endpoint)
+          continue;
+
+        for (k = 0; k < as->bNumEndpoints; k++) {
+          if (as->endpoint[k].extra)
+            free(as->endpoint[k].extra);
+        }
+        free(as->endpoint);
+      }
+
+      free(ifp->altsetting);
+    }
+
+    free(cf->interface);
+  }
+
+  free(dev->config);
 }
