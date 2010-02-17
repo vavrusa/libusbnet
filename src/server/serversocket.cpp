@@ -16,7 +16,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
-
+/*! \file serversocket.cpp
+    \brief Abstract server socket and packet handler.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup server
+    @{
+  */
 #include "serversocket.hpp"
 #include "common.h"
 #include <sys/poll.h>
@@ -120,3 +125,5 @@ bool ServerSocket::read(int fd)
 
    return true;
 }
+
+/** @} */

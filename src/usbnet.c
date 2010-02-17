@@ -16,7 +16,12 @@
 *   Free Software Foundation, Inc.,                                       *
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
 ***************************************************************************/
-
+/*! \file usbnet.c
+    \brief Reimplementation of libusb prototypes.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup libusbnet
+    @{
+  */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,7 +34,7 @@
 #include "common.h"
 #include <netinet/in.h>
 
-/* Imported from libusb-0.1/descriptors.c
+/** Imported from libusb-0.1/descriptors.c
  */
 static void usb_destroy_configuration(struct usb_device *dev);
 
@@ -44,15 +49,19 @@ static void call_release() {
    pthread_mutex_unlock(&__mutex);
 }
 
-// Remote socket filedescriptor
+//! Remote socket filedescriptor
 static int __remote_fd = -1;
 
-// Remote USB busses with devices
+//! Remote USB busses with devices
 static struct usb_bus* __remote_bus = 0;
 extern struct usb_bus* usb_busses;
 
 /* Global variables manipulators.
  */
+
+/** Free allocated busses and virtual devices.
+  * Function is called on executable exit (atexit()).
+  */
 void deinit_hostfd() {
    debug_msg("freeing busses ...");
 
@@ -85,8 +94,11 @@ void deinit_hostfd() {
    }
 }
 
-// Return remote filedescriptor
-static int init_hostfd() {
+/** Return host socket descriptor.
+  * Retrieve socket descriptor from SHM if not present
+  * and hook exit function for cleanup.
+  */
+int init_hostfd() {
 
    // Check exit function
    static char exitf_hooked = 0;
@@ -142,6 +154,7 @@ static int init_hostfd() {
  * Core functions.
  */
 
+/** Initialize USB subsystem. */
 void usb_init(void)
 {
    // Initialize remote fd
@@ -159,6 +172,7 @@ void usb_init(void)
    debug_msg("called");
 }
 
+/** Find busses on remote host. */
 int usb_find_busses(void)
 {
   // Get remote fd
@@ -188,6 +202,10 @@ int usb_find_busses(void)
    return res;
 }
 
+/** Find devices on remote host.
+  * Create new devices on local virtual bus.
+  * \warning Function replaces global usb_busses variable from libusb.
+  */
 int usb_find_devices(void)
 {
    // Get remote fd
@@ -298,7 +316,7 @@ int usb_find_devices(void)
                      dev->config->interface = malloc(dev->config->bNumInterfaces * sizeof(struct usb_interface));
                   }
 
-                  // TODO: extra interfaces
+                  //! \todo Implement usb_device extra interfaces - are they needed?
                   dev->config->extralen = 0;
                   dev->config->extra = NULL;
 
@@ -346,12 +364,12 @@ int usb_find_devices(void)
                         memcpy(endpoint, sym.val, szlen);
                         sym_next(&sym);
 
-                        // TODO: extra descriptors
+                        // Null extra descriptors.
                         endpoint->extralen = 0;
                         endpoint->extra = NULL;
                      }
 
-                     // TODO: extra interfaces
+                     // Null extra interfaces.
                      altsetting->extralen = 0;
                      altsetting->extra = NULL;
                   }
@@ -406,9 +424,11 @@ int usb_find_devices(void)
    return res;
 }
 
+/** Return pointer to virtual bus list.
+  */
 struct usb_bus* usb_get_busses(void)
 {
-   // TODO: merge both Local/Remote bus in future
+   //! \todo Merge both local - attached busses in future?
    debug_msg("returned %p", __remote_bus);
    return __remote_bus;
 }
@@ -1066,3 +1086,4 @@ static void usb_destroy_configuration(struct usb_device *dev)
 
   free(dev->config);
 }
+/** @} */

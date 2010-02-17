@@ -16,7 +16,15 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
+/*! \file clientsocket.cpp
+    \brief Client socket implementation.
+    \author Marek Vavrusa <marek@vavrusa.com>
 
+    Implements authentication and SSH tunnelling.
+
+    \addtogroup client
+    @{
+  */
 #include "clientsocket.hpp"
 #include "common.h"
 #include <sstream>
@@ -27,7 +35,8 @@
 #include <sys/wait.h>
 #include <sys/time.h>
 
-/* Portable sleep().
+/** Portable sleep() macro.
+  * \param ms Sleep time in miliseconds.
  */
 #define msleep(ms) { \
   struct timeval tv; \
@@ -210,4 +219,4 @@ pid_t popen2(const char *command)
 
     return pid;
 }
-
+/** @} */

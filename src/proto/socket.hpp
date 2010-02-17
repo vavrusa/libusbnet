@@ -16,7 +16,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
-
+/*! \file socket.hpp
+    \brief C++ style wrapper for BSD sockets with state checking and error control.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup protocpp
+    @{
+  */
 #pragma once
 #ifndef __socket_hpp__
 #define __socket_hpp__
@@ -103,3 +108,4 @@ class Socket
 };
 
 #endif // __socket_hpp__
+/** @} */

@@ -16,7 +16,12 @@
 *   Free Software Foundation, Inc.,                                       *
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
 ***************************************************************************/
-
+/*! \file protocol.h
+    \brief Protocol definitions and packet handling in C.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup proto
+    @{
+  */
 #pragma once
 #ifndef __protocol_h__
 #define __protocol_h__
@@ -64,8 +69,8 @@ typedef struct {
 } sym_t;
 
 /** Packet manipulation interface.
- *  TODO: Automatic allocation
- *        Fixed size packets size checking.
+ *  \todo Automatic packet size allocation.
+ *  \todo Fixed size packets boundaries checking.
  */
 
 // 1B op + 1B prefix + 4B length
@@ -115,7 +120,7 @@ int pkt_send(int fd, const char* buf, int size);
 
 /** Receive packet.
   * \param fd source fd
-  * \param pkt destination packet
+  * \param dst destination packet
   * \return packet size on success, 0 on error
   */
 uint32_t pkt_recv(int fd, packet_t* dst);
@@ -145,7 +150,7 @@ uint32_t recv_full(int fd, char* buf, uint32_t pending);
 
 /** Return first symbol in packet.
   * \param pkt source packet
-  * \param param target symbol
+  * \param sym target symbol
   */
 void pkt_begin(packet_t* pkt, sym_t* sym);
 
@@ -197,3 +202,4 @@ int unpack_size(const char* src, uint32_t* dst);
 #endif
 
 #endif // __protocol_h__
+/** @} */

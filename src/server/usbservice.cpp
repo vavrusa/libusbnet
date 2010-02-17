@@ -16,7 +16,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
-
+/*! \file usbservice.cpp
+    \brief Server handler implementation for libusb.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup server
+    @{
+  */
 #include "usbservice.hpp"
 #include "protocol.hpp"
 #include "common.h"
@@ -99,7 +104,8 @@ void UsbService::usb_find_busses(int fd, Packet& in)
 
 void UsbService::usb_find_devices(int fd, Packet& in)
 {
-   // WARNING: Can't guarantee correct number in case of multi-client environment
+   // Can't guarantee correct result in case of multi-client environment,
+   // but anything >=0 should be fine.
    int res = ::usb_find_devices();
    log_msg("Call: usb_find_devices() = %d", res);
 
@@ -121,20 +127,14 @@ void UsbService::usb_find_devices(int fd, Packet& in)
       block.addString(bus->dirname);
       block.addUInt32(bus->location);
 
-      // TODO: only top-level devices supported
+      //! \todo Implement device children ptrs.
       for(struct usb_device* dev = bus->devices; dev; dev = dev->next) {
 
-         /* char filename[PATH_MAX + 1];
-            struct usb_device_descriptor descriptor;
-            TODO: struct usb_config_descriptor *config;
-            u_int8_t devnum;
-
-            TODO: unsigned char num_children;
-                  struct usb_device **children;
-          */
          log_msg("Bus %s Device %s: ID %04x:%04x",
                 bus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
          Block devBlock = block.writeBlock(SequenceType);
+
+         //! \todo Fix raw structures byte order in integer members.
          devBlock.addString(dev->filename);
          devBlock.addData((const char*) &(dev->descriptor), sizeof(struct usb_device_descriptor));
          devBlock.addData((const char*) dev->config, sizeof(struct usb_config_descriptor));
@@ -641,3 +641,4 @@ void UsbService::usb_interrupt_read(int fd, Packet &in)
    if(data != NULL)
       delete data;
 }
+/** @} */

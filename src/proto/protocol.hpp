@@ -16,7 +16,13 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
-
+/*! \file protocol.hpp
+    \brief Protocol abstraction and packet handling in C++.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup protocpp
+    \ingroup proto
+    @{
+  */
 #ifndef __protocol_hpp__
 #define __protocol_hpp__
 #include "protocol.h"
@@ -251,3 +257,4 @@ class Packet : public Block
 };
 
 #endif // __protocol_hpp__
+/** @} */

@@ -16,7 +16,12 @@
 *   Free Software Foundation, Inc.,                                       *
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
 ***************************************************************************/
-
+/*! \file protocol.c
+    \brief Protocol definitions and packet handling in C.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup proto
+    @{
+  */
 #include "protocol.h"
 #include <stdio.h>
 #include <string.h>
@@ -49,7 +54,7 @@ void pkt_init(packet_t* pkt, uint8_t op)
 
    // Set opcode
    pkt->buf[0] = (char) op;
-   pkt->buf[1] = 0x84; // TODO: make blocks in C API
+   pkt->buf[1] = 0x84; //! \todo C API packet size packing.
 
    // Set data pos
    pkt->size = PACKET_MINSIZE;
@@ -91,7 +96,6 @@ uint32_t pkt_recv(int fd, packet_t* dst)
       dst->size += size;
    }
 
-   // DEBUG: dump
    #ifdef DEBUG
    //pkt_dump(dst->buf, dst->size);
    #endif
@@ -310,3 +314,4 @@ int unpack_size(const char* src, uint32_t* dst)
 
    return 0;
 }
+/** @} */

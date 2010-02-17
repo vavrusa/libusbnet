@@ -16,7 +16,12 @@
 *   Free Software Foundation, Inc.,                                       *
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
 ***************************************************************************/
-
+/*! \file usbnet.cpp
+    \brief Client wrapper executable.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup client
+    @{
+  */
 #include "clientsocket.hpp"
 #include "common.h"
 #include "cmdflags.hpp"
@@ -158,3 +163,4 @@ int main(int argc, char* argv[])
 
    return ret;
 }
+/** @} */

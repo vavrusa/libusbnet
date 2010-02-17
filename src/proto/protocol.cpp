@@ -16,7 +16,13 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
-
+/*! \file protocol.cpp
+    \brief Protocol abstraction and packet handling in C++.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup protocpp
+    \ingroup proto
+    @{
+  */
 #include "protocol.hpp"
 #include <cstring>
 #include <cstdio>
@@ -67,7 +73,7 @@ Block& Block::addNumeric(uint8_t type, uint8_t len, uint32_t val)
    pushPacked(len);
 
    // Cast to ensure correct data
-   // TODO: Little/Big Endian conversions should apply
+   //! \todo Apply Little/Big Endian (host to network) conversions.
    uint8_t val8 = val;
    uint16_t val16 = val;
    if(len == sizeof(uint32_t)) append((const char*) &val,   sizeof(uint32_t));
@@ -183,3 +189,4 @@ int Packet::send(int fd) {
    finalize();
    return pkt_send(fd, mBuf.data(), size());
 }
+/** @} */

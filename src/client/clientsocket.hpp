@@ -16,7 +16,15 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
+/*! \file clientsocket.hpp
+    \brief Client socket implementation.
+    \author Marek Vavrusa <marek@vavrusa.com>
 
+    Implements authentication and SSH tunnelling.
+
+    \addtogroup client
+    @{
+  */
 #pragma once
 #ifndef __clientsocket_hpp__
 #define __clientsocket_hpp__
@@ -74,3 +82,4 @@ class ClientSocket : public Socket
 };
 
 #endif // __clientsocket_hpp__
+/** @} */

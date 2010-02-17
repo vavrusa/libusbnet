@@ -16,7 +16,12 @@
 *   Free Software Foundation, Inc.,                                       *
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
 ***************************************************************************/
-
+/*! \file usbexportd.cpp
+    \brief Server executable.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup server
+    @{
+  */
 #include "usbservice.hpp"
 #include "cmdflags.hpp"
 #include "common.h"
@@ -75,3 +80,4 @@ int main(int argc, char* argv[])
 
    return EXIT_SUCCESS;
 }
+/** @} */

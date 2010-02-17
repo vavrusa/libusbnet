@@ -16,14 +16,21 @@
 *   Free Software Foundation, Inc.,                                       *
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
 ***************************************************************************/
+/*! \file usbnet.h
+    \brief libusb prototypes import.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup libusbnet
+    @{
+  */
 #ifndef __usbnet_h__
 #define __usbnet_h__
 
 // Include original libusb header
 #include <usb.h>
 
-/* @from: libusb/usbi.h:41
-   WARNING: Matches libusb-0.1.12, may loss binary compatibility.
+/** \private
+    @from: libusb/usbi.h:41
+    \warning Matches libusb-0.1.12, may loss binary compatibility.
  */
 struct usb_dev_handle {
    int fd;
@@ -40,3 +47,4 @@ struct usb_dev_handle {
 };
 
 #endif // __usbnet_h__
+/** @} */

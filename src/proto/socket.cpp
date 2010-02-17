@@ -16,7 +16,12 @@
 *   Free Software Foundation, Inc.,                                       *
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
 ***************************************************************************/
-
+/*! \file socket.cpp
+    \brief C++ style wrapper for BSD sockets with state checking and error control.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup protocpp
+    @{
+  */
 #include "socket.hpp"
 #include <cstring>
 #include <iostream>
@@ -147,3 +152,4 @@ int Socket::close()
 
    return Ok;
 }
+/** @} */

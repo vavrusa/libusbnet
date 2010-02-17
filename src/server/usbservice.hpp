@@ -16,7 +16,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
-
+/*! \file usbservice.hpp
+    \brief Server handler implementation for libusb.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup server
+    @{
+  */
 #ifndef __usbservice_hpp__
 #define __usbservice_hpp__
 #include "serversocket.hpp"
@@ -75,3 +80,4 @@ class UsbService : public ServerSocket
 };
 
 #endif // __usbservice_hpp__
+/** @} */

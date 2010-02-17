@@ -16,7 +16,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
-
+/*! \file usbproto.h
+    \brief Protocol implementation for libusb.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup libusbnet
+    @{
+  */
 #ifndef __libusbproto_h__
 #define __libusbproto_h__
 
@@ -49,3 +54,4 @@ typedef enum {
 } Call;
 
 #endif // __libusbproto_h__
+/** @} */

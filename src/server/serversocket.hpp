@@ -16,7 +16,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
-
+/*! \file serversocket.hpp
+    \brief Abstract server socket and packet handler.
+    \author Marek Vavrusa <marek@vavrusa.com>
+    \addtogroup server
+    @{
+  */
 #pragma once
 #ifndef __serversocket_hpp__
 #define __serversocket_hpp__
@@ -44,8 +49,8 @@ class ServerSocket : public Socket
 
    /** Handle incoming packet.
      * \param fd source fd
-     * \param op packet opcode
-     * TODO: implement shared data buffer
+     * \param pkt incoming packet
+     * \todo Implement incoming packet shared buffer.
      */
    virtual bool handle(int fd, Packet& pkt) = 0;
 
@@ -57,3 +62,4 @@ class ServerSocket : public Socket
 };
 
 #endif // __serversocket_hpp__
+/** @} */
