@@ -19,17 +19,6 @@
 /*! \file protocol.h
     \brief Protocol definitions and packet handling in C.
     \author Marek Vavrusa <marek@vavrusa.com>
-
-    Each entity is represented as Type-Length-Value.
-    Example:
-       packet = 1 {     // 0x31 - Type, 0x06 - Length, is structural
-         int(4B) 2;     // 0x02 - Type, 0x04 - Length, 0x02 0x00 0x00 0x00 - Value
-       }
-    How to parse:
-       pkt_begin(&pkt, &it); // Read packet size and enter
-       if(it.type == IntegerType)
-         printf("int(4B): %d\n", as_int(it.val, it.len));
-
     \addtogroup proto
     @{
   */
@@ -38,6 +27,31 @@
 #define __protocol_h__
 #include <stdint.h>
 #include "protobase.h"
+
+/** \page proto_page
+    <h2>Protocol C API</h2>
+    Each entity is represented as Type-Length-Value.
+    Example:
+    \code
+       packet = 1 {     // 0x31 - Type, 0x06 - Length, is structural
+         int(4B) 2;     // 0x02 - Type, 0x04 - Length, 0x02 0x00 0x00 0x00 - Value
+       }
+    \endcode
+    <h3>How to parse packet</h3>
+    \code
+       pkt_begin(&pkt, &it); // Read packet size and enter
+       if(it.type == IntegerType)
+         printf("int(4B): %d\n", as_int(it.val, it.len));
+    \endcode
+    <h3>How to write packet</h3>
+    \code
+       char buf[PACKET_MINSIZE]; // Buffering on stack
+       Packet pkt = pkt_create(buf, PACKET_MINSIZE); // Static initialization
+       pkt_init(&pkt, UsbInit);  // Write packet header and opcode
+       pkt_append(&pkt, IntegerType, sizeof(int), &someval); // Append integer
+       pkt_send(&pkt, fd);       // Send packet
+    \endcode
+  */
 
 /** Packet structure. */
 typedef struct {

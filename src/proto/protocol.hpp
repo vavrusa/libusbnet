@@ -29,6 +29,28 @@
 #include <string>
 #include <vector>
 
+/** \page protopp_page
+    <h2>Protocol C++ API</h2>
+    Each entity is represented as Type-Length-Value.
+    Example:
+    \code
+       packet = 1 {     // 0x31 - Type, 0x06 - Length, is structural
+         int(4B) 2;     // 0x02 - Type, 0x04 - Length, 0x02 0x00 0x00 0x00 - Value
+       }
+    \endcode
+    <h3>How to parse packet</h3>
+    \code
+      Iterator it(pkt); // Create iterator from packet reference.
+      printf("int(4B): %d\n", it.asInt()); // Interpret item as integer.
+    \endcode
+    <h3>How to write packet</h3>
+    \code
+      Packet pkt(UsbInit); // Create packet.
+      pkt.addInt32(someval); // Append 32bit integer.
+      pkt.send(fd); // Send packet.
+    \endcode
+  */
+
 /** C++ protocol abstraction. */
 namespace Proto
 {
