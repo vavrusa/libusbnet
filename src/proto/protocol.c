@@ -23,7 +23,6 @@
     @{
   */
 #include "protocol.h"
-#include "common.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -69,13 +68,6 @@ uint32_t pkt_size(packet_t* pkt)
    return pkt->size;
 }
 
-int pkt_send(int fd, const char* buf, int size)
-{
-   // Send buffer
-   int res = send(fd, buf, size, 0);
-   return res;
-}
-
 uint32_t pkt_recv(int fd, packet_t* dst)
 {
    // Prepare packet
@@ -106,42 +98,6 @@ uint32_t pkt_recv(int fd, packet_t* dst)
 
    // Return packet size
    return dst->size;
-}
-
-uint32_t recv_full(int fd, char* buf, uint32_t pending)
-{
-   // Read packet header
-   int rcvd = 0;
-   uint32_t read = 0;
-   while(pending != 0) {
-
-      if((rcvd = recv(fd, buf, pending, 0)) <= 0)
-         return 0;
-
-      pending -= rcvd;
-      buf += rcvd;
-      read += rcvd;
-   }
-
-   return read;
-}
-
-uint32_t pkt_recv_header(int fd, char *buf)
-{
-   // Read packet header
-   uint32_t rcvd = 0;
-   if((rcvd = recv_full(fd, buf, 2)) == 0)
-      return 0;
-
-   // Multi-byte
-   unsigned c = (unsigned char) buf[1];
-   if(c > 0x80) {
-      if((rcvd = recv_full(fd, buf + 2, c - 0x80)) == 0)
-         return 0;
-      rcvd += 2;
-   }
-
-   return rcvd;
 }
 
 int pkt_append(packet_t* pkt, uint8_t type, uint16_t len, void* val)
@@ -182,23 +138,6 @@ void* pkt_begin(packet_t* pkt, sym_t* sym)
    }
 
    return sym->cur;
-}
-
-void pkt_dump(const char* buf, uint32_t size)
-{
-   printf("Packet (%dB):", size);
-   uint32_t i = 0;
-   for(i = 0; i < size; ++i) {
-      if(i == 0 || i % 8 == 0) {
-         if(i == 160) {
-            printf("\n ...");
-            break;
-         }
-         printf("\n%4d | ", i);
-      }
-      printf("0x%02x ", (unsigned char) *(buf + i));
-   }
-   printf("\n");
 }
 
 void* sym_next(sym_t* sym)
@@ -273,49 +212,4 @@ const char* as_string(void* data, uint32_t bytes)
    return (const char*) data;
 }
 
-int pack_size(uint32_t val, char* dst)
-{
-   // 8bit value
-   if(val <= 0x80) {
-      dst[0] = (unsigned char) val;
-      return sizeof(char);
-   }
-
-   // 16bit value
-   if(val < ((uint16_t)~0)) {
-      uint16_t vval = val;
-      dst[0] = (0x80 + sizeof(uint16_t));
-      memcpy(dst + 1, (const char*) &vval, sizeof(uint16_t));
-      return sizeof(uint16_t) + 1;
-   }
-
-   // 32bit value
-   dst[0] = (0x80 + sizeof(uint32_t));
-   memcpy(dst + 1, (const char*) &val, sizeof(uint32_t));
-   return sizeof(uint32_t) + 1;
-}
-
-int unpack_size(const char* src, uint32_t* dst)
-{
-   // 8bit value
-   unsigned char c = (unsigned char) *src;
-   if(c <= 0x80) {
-      *dst = *((uint8_t*) (src));
-      return sizeof(uint8_t);
-   }
-
-   // 16bit value
-   if(c == 0x82) {
-      *dst = *((uint16_t*) (src + 1));
-      return sizeof(uint16_t) + 1;
-   }
-
-   // 32bit value
-   if(c == 0x84) {
-      *dst = *((uint32_t*) (src + 1));
-      return sizeof(uint32_t) + 1;
-   }
-
-   return 0;
-}
 /** @} */

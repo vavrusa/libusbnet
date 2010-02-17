@@ -5,13 +5,16 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
 
 # Targets
 set(sources_c protocol.c
+              protobase.c
               )
 
 set(sources   protocol.cpp
               socket.cpp
+              protobase.c
               )
 
 set(headers_c protocol.h
+              protobase.h
               )
 
 set(headers   protocol.hpp
@@ -19,7 +22,7 @@ set(headers   protocol.hpp
               )
 
 add_library(urpc    SHARED ${sources_c} ${headers_c})
-add_library(urpc_pp SHARED ${sources_c} ${headers_c} ${sources} ${headers})
+add_library(urpc_pp SHARED ${sources} ${headers})
 
 # Install
 install( TARGETS urpc urpc_pp

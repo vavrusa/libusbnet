@@ -25,7 +25,7 @@
   */
 #ifndef __protocol_hpp__
 #define __protocol_hpp__
-#include "protocol.h"
+#include "protobase.h"
 #include <string>
 #include <vector>
 

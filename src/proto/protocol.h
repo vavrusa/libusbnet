@@ -37,34 +37,7 @@
 #ifndef __protocol_h__
 #define __protocol_h__
 #include <stdint.h>
-#include "common.h"
-
-/** ASN.1 semantic types.
-  *
-  */
-typedef enum {
-
-   // Basic types
-   InvalidType    = 0x00,
-   BoolType       = 0x01,
-   IntegerType    = 0x02,
-   UnsignedType   = 0x03,
-   NullType       = 0x05,
-   OctetType      = 0x04,
-   SequenceType   = 0x10,
-   EnumType       = 0x0A,
-   SetType        = 0x11,
-   StructureType  = 0x20,
-   RawType        = StructureType + 1,
-   CallType       = StructureType|SequenceType,
-
-} Type;
-
-/* Packet manipulation. */
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+#include "protobase.h"
 
 /** Packet structure. */
 typedef struct {
@@ -85,9 +58,6 @@ typedef struct {
  *  \todo Automatic packet size allocation.
  *  \todo Fixed size packets boundaries checking.
  */
-
-// 1B op + 1B prefix + 4B length
-#define PACKET_MINSIZE (sizeof(uint8_t)+sizeof(uint8_t)+sizeof(uint32_t))
 
 /** Initialize packet on existing buffer.
   * \param buf must be char* or char[]
@@ -124,14 +94,6 @@ void pkt_init(packet_t* pkt, uint8_t op);
   */
 int pkt_append(packet_t* pkt, uint8_t type, uint16_t len, void* val);
 
-/** Send packet.
-  * \param fd destination filedescriptor
-  * \param buf packet buffer
-  * \param size packet buffer size
-  * \return send() value
-  */
-int pkt_send(int fd, const char* buf, int size);
-
 /** Receive packet.
   * \param fd source fd
   * \param dst destination packet
@@ -139,26 +101,12 @@ int pkt_send(int fd, const char* buf, int size);
   */
 uint32_t pkt_recv(int fd, packet_t* dst);
 
-/** Receive packet header.
-  * Ensure buf is at least PACKET_MINSIZE.
-  * \return header size on success, 0 on error
-  */
-uint32_t pkt_recv_header(int fd, char* buf);
-
-/** Block until all pending data is received.
-  */
-uint32_t recv_full(int fd, char* buf, uint32_t pending);
-
 /** Return first symbol in packet.
   * \param pkt source packet
   * \param sym target symbol
   * \return current symbol or NULL
   */
 void* pkt_begin(packet_t* pkt, sym_t* sym);
-
-/** Dump packet (debugging).
-  */
-void pkt_dump(const char* pkt, uint32_t size);
 
 /** Next symbol.
   * \return next symbol or NULL on end
@@ -181,22 +129,6 @@ int as_int(void* data, uint32_t bytes);
 /** Interpret symbol as string.
   */
 const char* as_string(void* data, uint32_t bytes);
-
-/** Pack size to byte array.
-  * \warning Array has to be at least 5B long for uint32.
-  * \return packed size, -1 on error
-  */
-int pack_size(uint32_t val, char* dst);
-
-/** Unpack size from byte array.
-  * \warning Array has to be at least 5B long for uint32.
-  * \return unpacked value
-  */
-int unpack_size(const char* src, uint32_t* dst);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // __protocol_h__
 /** @} */
