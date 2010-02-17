@@ -66,8 +66,10 @@ Block& Block::addNumeric(uint8_t type, uint8_t len, uint32_t val)
    push((uint8_t) type);
    pushPacked(len);
 
-   // Cast to ensure correct data on both Big and Little-Endian hosts
-   uint8_t val8 = val, val16 = val;
+   // Cast to ensure correct data
+   // TODO: Little/Big Endian conversions should apply
+   uint8_t val8 = val;
+   uint16_t val16 = val;
    if(len == sizeof(uint32_t)) append((const char*) &val,   sizeof(uint32_t));
    if(len == sizeof(uint16_t)) append((const char*) &val16, sizeof(uint16_t));
    if(len == sizeof(uint8_t))  append((const char*) &val8,  sizeof(uint8_t));
