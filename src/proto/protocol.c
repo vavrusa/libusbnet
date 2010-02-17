@@ -23,11 +23,12 @@
     @{
   */
 #include "protocol.h"
+#include "common.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-packet_t* pkt_new(uint32_t size) {
+packet_t* pkt_new(uint32_t size, uint8_t op) {
 
    // Minimum packet size is PACKET_MINSIZE
    if(size < PACKET_MINSIZE) {
@@ -35,10 +36,13 @@ packet_t* pkt_new(uint32_t size) {
       size = PACKET_MINSIZE;
    }
 
+   // Alloc packet
    packet_t* pkt = malloc(sizeof(packet_t));
    pkt->buf = malloc(size * sizeof(char));
    pkt->bufsize = size;
-   pkt->size = 0;
+
+   // Initialize packet
+   pkt_init(pkt, op);
    return pkt;
 }
 
@@ -161,27 +165,23 @@ int pkt_append(packet_t* pkt, uint8_t type, uint16_t len, void* val)
    return written;
 }
 
-void pkt_begin(packet_t* pkt, sym_t* sym)
+void* pkt_begin(packet_t* pkt, sym_t* sym)
 {
    // Invalidate symbol
    sym->type = InvalidType;
    sym->len = 0;
+   sym->cur = sym->next = sym->end = NULL;
 
    // Check packet size
    if(pkt_size(pkt) > 1) {
       uint32_t pktsize;
       int len = unpack_size(pkt->buf + 1, &pktsize);
       sym->next = pkt->buf + 1 + len;
-      sym->cur = NULL;
+      sym->end = sym->next + pktsize;
       sym_next(sym);
    }
-   else
-      sym->cur = pkt_end(pkt);
-}
 
-void* pkt_end(packet_t* pkt)
-{
-   return pkt->buf + pkt->size;
+   return sym->cur;
 }
 
 void pkt_dump(const char* buf, uint32_t size)
@@ -206,6 +206,10 @@ void* sym_next(sym_t* sym)
    // Invalidate
    sym->type = InvalidType;
    sym->len = 0;
+
+   // Check boundary
+   if(sym->next >= sym->end)
+      return NULL;
 
    // Read type
    sym->cur = sym->next;

@@ -84,10 +84,11 @@ fprintf(stderr, "\n")
 
 /** Debug macro for marking functions deprecated. */
 #ifdef DEBUG
-#define DEPRECATED \
-#warning "function __func__ is deprecated."
+#ifdef __GNUC__
+#define DEPRECATED __attribute__ ((deprecated))
 #else
 #define DEPRECATED
+#endif
 #endif
 
 /* Deprecated functions / macros.

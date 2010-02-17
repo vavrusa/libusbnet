@@ -19,6 +19,17 @@
 /*! \file protocol.h
     \brief Protocol definitions and packet handling in C.
     \author Marek Vavrusa <marek@vavrusa.com>
+
+    Each entity is represented as symbol - structures and atomic types.
+    Example:
+       packet = 1 {     // 0x31 - Type, 0x06 - Length, is structural
+         int(4B) 2;     // 0x02 - Type, 0x04 - Length, 0x02 0x00 0x00 0x00 - Value
+       }
+    How to parse:
+       pkt_begin(&pkt, &sym); // Read packet size and enter
+       if(sym.type == IntegerType)
+         printf("int(4B): %d\n", as_int(sym.val, sym.len));
+
     \addtogroup proto
     @{
   */
@@ -26,6 +37,7 @@
 #ifndef __protocol_h__
 #define __protocol_h__
 #include <stdint.h>
+#include "common.h"
 
 /** ASN.1 semantic types.
   *
@@ -36,6 +48,7 @@ typedef enum {
    InvalidType    = 0x00,
    BoolType       = 0x01,
    IntegerType    = 0x02,
+   UnsignedType   = 0x03,
    NullType       = 0x05,
    OctetType      = 0x04,
    SequenceType   = 0x10,
@@ -62,7 +75,7 @@ typedef struct {
 
 /** Parameter structure. */
 typedef struct {
-   void *cur, *next;
+   void *cur, *next, *end;
    uint8_t type;
    uint32_t len;
    void*    val;
@@ -85,9 +98,10 @@ typedef struct {
 /** Allocate new packet.
   * Minimal packet size is 1 + 4B.
   * \param size required packet size
+  * \param op packet opcode
   * \return new packet
   */
-packet_t* pkt_new(uint32_t size);
+packet_t* pkt_new(uint32_t size, uint8_t op);
 
 /** Free allocated packet.
   * Use only with dynamically allocated packets.
@@ -135,36 +149,19 @@ uint32_t pkt_recv_header(int fd, char* buf);
   */
 uint32_t recv_full(int fd, char* buf, uint32_t pending);
 
-
-/** Packet parsing interface.
- * Each entity is represented as symbol - structures and atomic types.
- * Example:
- *   packet = 1 {     // 0x31 - Type, 0x06 - Length, is structural
- *     int(4B) 2;     // 0x02 - Type, 0x04 - Length, 0x02 0x00 0x00 0x00 - Value
- *   }
- * How to parse:
- *   pkt_begin(&pkt, &sym); // Read packet size and enter
- *   if(sym.type == IntegerType)
- *     printf("int(4B): %d\n", as_int(sym.val, sym.len));
- */
-
 /** Return first symbol in packet.
   * \param pkt source packet
   * \param sym target symbol
+  * \return current symbol or NULL
   */
-void pkt_begin(packet_t* pkt, sym_t* sym);
-
-/** Return packet end.
-  * Param length + 1.
-  */
-void* pkt_end(packet_t* pkt);
+void* pkt_begin(packet_t* pkt, sym_t* sym);
 
 /** Dump packet (debugging).
   */
 void pkt_dump(const char* pkt, uint32_t size);
 
 /** Next symbol.
-  * \return current symbol ptr
+  * \return next symbol or NULL on end
   */
 void* sym_next(sym_t* sym);
 

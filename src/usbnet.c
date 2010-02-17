@@ -189,8 +189,7 @@ int usb_find_busses(void)
    int res = 0;
    sym_t sym;
    if(pkt_recv(fd, &pkt) > 0) {
-      pkt_begin(&pkt, &sym);
-      if(sym.cur != pkt_end(&pkt)) {
+      if(pkt_begin(&pkt, &sym) != NULL) {
          if(sym.type == IntegerType)
             res = as_uint(sym.val, sym.len);
       }
@@ -227,16 +226,15 @@ int usb_find_devices(void)
       // Get return value
       if(sym.type == IntegerType) {
          res = as_uint(sym.val, sym.len);
-         sym_next(&sym);
       }
 
-      // Allocate structures
+      // Allocate virtualbus
       struct usb_bus vbus;
       vbus.next = __remote_bus;
       struct usb_bus* rbus = &vbus;
 
       // Get busses
-      for(;;) {
+      while(sym_next(&sym) != NULL) {
 
          // Evaluate
          if(sym.type == StructureType) {
@@ -397,10 +395,6 @@ int usb_find_devices(void)
             debug_msg("unexpected symbol 0x%02x", sym.type);
             sym_next(&sym);
          }
-
-         // Check boundaries
-         if(sym.cur == pkt_end(&pkt))
-            break;
       }
 
       // Deallocate unnecessary busses
@@ -758,8 +752,7 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
    int fd = init_hostfd();
 
    // Prepare packet
-   packet_t* pkt = pkt_new(size + 128);
-   pkt_init(pkt, UsbControlMsg);
+   packet_t* pkt = pkt_new(size + 128, UsbControlMsg);
    pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(pkt, IntegerType, sizeof(int), &requesttype);
    pkt_append(pkt, IntegerType, sizeof(int), &request);
@@ -804,8 +797,7 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
    int fd = init_hostfd();
 
    // Prepare packet
-   packet_t* pkt = pkt_new(size + 128);
-   pkt_init(pkt, UsbBulkRead);
+   packet_t* pkt = pkt_new(size + 128, UsbBulkRead);
    pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(pkt, IntegerType, sizeof(int), &ep);
    pkt_append(pkt, IntegerType, sizeof(int), &size);
@@ -845,8 +837,7 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
    int fd = init_hostfd();
 
    // Prepare packet
-   packet_t* pkt = pkt_new(size + 128);
-   pkt_init(pkt, UsbBulkWrite);
+   packet_t* pkt = pkt_new(size + 128, UsbBulkWrite);
    pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(pkt, IntegerType, sizeof(int), &ep);
    pkt_append(pkt, OctetType,   size,        bytes);
@@ -881,8 +872,7 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes, int size, int 
    int fd = init_hostfd();
 
    // Prepare packet
-   packet_t* pkt = pkt_new(size + 128);
-   pkt_init(pkt, UsbInterruptWrite);
+   packet_t* pkt = pkt_new(size + 128, UsbInterruptWrite);
    pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(pkt, IntegerType, sizeof(int), &ep);
    pkt_append(pkt, OctetType,   size,        bytes);
@@ -914,8 +904,7 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
    int fd = init_hostfd();
 
    // Prepare packet
-   packet_t* pkt = pkt_new(size + 128);
-   pkt_init(pkt, UsbInterruptRead);
+   packet_t* pkt = pkt_new(size + 128, UsbInterruptRead);
    pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(pkt, IntegerType, sizeof(int), &ep);
    pkt_append(pkt, IntegerType, sizeof(int), &size);
