@@ -121,7 +121,7 @@ int pkt_append(Packet* pkt, uint8_t type, uint16_t len, void* val)
    return written;
 }
 
-void* pkt_begin(Packet* pkt, sym_t* sym)
+void* pkt_begin(Packet* pkt, Iterator* sym)
 {
    // Invalidate symbol
    sym->type = InvalidType;
@@ -134,13 +134,13 @@ void* pkt_begin(Packet* pkt, sym_t* sym)
       int len = unpack_size(pkt->buf + 1, &pktsize);
       sym->next = pkt->buf + 1 + len;
       sym->end = sym->next + pktsize;
-      sym_next(sym);
+      iter_next(sym);
    }
 
    return sym->cur;
 }
 
-void* sym_next(sym_t* sym)
+void* iter_next(Iterator* sym)
 {
    // Invalidate
    sym->type = InvalidType;
@@ -170,7 +170,7 @@ void* sym_next(sym_t* sym)
    return sym->cur;
 }
 
-void* sym_enter(sym_t* sym)
+void* iter_enter(Iterator* sym)
 {
    // Get symbol header size
    uint32_t bsize;
@@ -178,38 +178,7 @@ void* sym_enter(sym_t* sym)
 
    // Shift by header size and use as next
    sym->next = sym->cur + 1 + len;
-   return sym_next(sym);
-}
-
-unsigned as_uint(void* data, uint32_t bytes)
-{
-   switch(bytes) {
-   case 1: return *((uint8_t*) data); break;
-   case 2: return *((uint16_t*) data); break;
-   case 4: return *((uint32_t*) data); break;
-   default: break;
-   }
-
-   // Invalid number of bytes
-   return 0;
-}
-
-int as_int(void* data, uint32_t bytes)
-{
-   switch(bytes) {
-   case 1: return *((int8_t*) data); break;
-   case 2: return *((int16_t*) data); break;
-   case 4: return *((int32_t*) data); break;
-   default: break;
-   }
-
-   // Invalid number of bytes
-   return 0;
-}
-
-const char* as_string(void* data, uint32_t bytes)
-{
-   return (const char*) data;
+   return iter_next(sym);
 }
 
 /** @} */

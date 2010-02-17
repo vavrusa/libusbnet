@@ -132,4 +132,36 @@ int unpack_size(const char* src, uint32_t* dst)
 
    return 0;
 }
+
+unsigned as_uint(void* data, uint32_t bytes)
+{
+   unsigned val = 0;
+   switch(bytes) {
+   case 1: val = *((uint8_t*) data); break;
+   case 2: val = *((uint16_t*) data); break;
+   case 4: val = *((uint32_t*) data); break;
+   default: break;
+   }
+
+   return val;
+}
+
+int as_int(void* data, uint32_t bytes)
+{
+   int val = 0;
+   switch(bytes) {
+   case 1: val = *((int8_t*) data); break;
+   case 2: val = *((int16_t*) data); break;
+   case 4: val = *((int32_t*) data); break;
+   default: break;
+   }
+
+   return val;
+}
+
+const char* as_string(void* data, uint32_t bytes)
+{
+   return (const char*) data;
+}
+
 /** @} */

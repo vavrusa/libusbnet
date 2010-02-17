@@ -186,7 +186,7 @@ int usb_find_busses(void)
 
    // Get number of changes
    int res = 0;
-   sym_t sym;
+   Iterator sym;
    if(pkt_recv(fd, &pkt) > 0) {
       if(pkt_begin(&pkt, &sym) != NULL) {
          if(sym.type == IntegerType)
@@ -218,7 +218,7 @@ int usb_find_devices(void)
 
    // Get number of changes
    int res = 0;
-   sym_t sym;
+   Iterator sym;
    if(pkt_recv(fd, &pkt) > 0) {
       pkt_begin(&pkt, &sym);
 
@@ -233,11 +233,11 @@ int usb_find_devices(void)
       struct usb_bus* rbus = &vbus;
 
       // Get busses
-      while(sym_next(&sym) != NULL) {
+      while(iter_next(&sym) != NULL) {
 
          // Evaluate
          if(sym.type == StructureType) {
-            sym_enter(&sym);
+            iter_enter(&sym);
 
             // Allocate bus
             if(rbus->next == NULL) {
@@ -255,13 +255,13 @@ int usb_find_devices(void)
             // Read dirname
             if(sym.type == OctetType) {
                strcpy(rbus->dirname, as_string(sym.val, sym.len));
-               sym_next(&sym);
+               iter_next(&sym);
             }
 
             // Read location
             if(sym.type == IntegerType) {
                rbus->location = as_int(sym.val, sym.len);
-               sym_next(&sym);
+               iter_next(&sym);
             }
 
             // Read devices
@@ -269,7 +269,7 @@ int usb_find_devices(void)
             vdev.next = rbus->devices;
             struct usb_device* dev = &vdev;
             while(sym.type == SequenceType) {
-               sym_enter(&sym);
+               iter_enter(&sym);
 
                // Initialize
                if(dev->next == NULL) {
@@ -287,13 +287,13 @@ int usb_find_devices(void)
                // Read filename
                if(sym.type == OctetType) {
                   strcpy(dev->filename, as_string(sym.val, sym.len));
-                  sym_next(&sym);
+                  iter_next(&sym);
                }
 
                // Read description
                if(sym.type == RawType) {
                   memcpy(&dev->descriptor, sym.val, sym.len);
-                  sym_next(&sym);
+                  iter_next(&sym);
                }
 
                // Read config
@@ -317,7 +317,7 @@ int usb_find_devices(void)
                   dev->config->extralen = 0;
                   dev->config->extra = NULL;
 
-                  sym_next(&sym);
+                  iter_next(&sym);
                }
 
                // Load interfaces
@@ -327,7 +327,7 @@ int usb_find_devices(void)
 
                   // Read altsettings count
                   iface->num_altsetting = as_int(sym.val, sym.len);
-                  sym_next(&sym);
+                  iter_next(&sym);
 
                   // Allocate altsettings
                   if(iface->num_altsetting > 0) {
@@ -344,7 +344,7 @@ int usb_find_devices(void)
                         szlen = sym.len;
 
                      memcpy(altsetting, sym.val, szlen);
-                     sym_next(&sym);
+                     iter_next(&sym);
 
                      // Allocate endpoints
                      if(altsetting->bNumEndpoints > 0) {
@@ -359,7 +359,7 @@ int usb_find_devices(void)
                            szlen = sym.len;
 
                         memcpy(endpoint, sym.val, szlen);
-                        sym_next(&sym);
+                        iter_next(&sym);
 
                         // Null extra descriptors.
                         endpoint->extralen = 0;
@@ -375,7 +375,7 @@ int usb_find_devices(void)
                // Read devnum
                if(sym.type == IntegerType) {
                   dev->devnum = as_int(sym.val, sym.len);
-                  sym_next(&sym);
+                  iter_next(&sym);
                }
 
               log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
@@ -392,7 +392,7 @@ int usb_find_devices(void)
          }
          else {
             debug_msg("unexpected symbol 0x%02x", sym.type);
-            sym_next(&sym);
+            iter_next(&sym);
          }
       }
 
@@ -447,11 +447,11 @@ usb_dev_handle *usb_open(struct usb_device *dev)
    // Get response
    int res = -1, devfd = -1;
    if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbOpen) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(&pkt, &sym);
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
-         sym_next(&sym);
+         iter_next(&sym);
       }
       if(sym.type == IntegerType) {
           devfd = as_int(sym.val, sym.len);
@@ -492,7 +492,7 @@ int usb_close(usb_dev_handle *dev)
    // Get response
    int res = -1;
    if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbClose) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(&pkt, &sym);
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
@@ -521,13 +521,13 @@ int usb_set_configuration(usb_dev_handle *dev, int configuration)
    // Get response
    int res = -1;
    if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbSetConfiguration) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(&pkt, &sym);
 
       // Read result
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
-         sym_next(&sym);
+         iter_next(&sym);
       }
 
       // Read callback configuration
@@ -562,13 +562,13 @@ int usb_set_altinterface(usb_dev_handle *dev, int alternate)
    // Get response
    int res = -1;
    if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbSetAltInterface) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(&pkt, &sym);
 
       // Read result
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
-         sym_next(&sym);
+         iter_next(&sym);
       }
 
       // Read callback configuration
@@ -603,7 +603,7 @@ int usb_resetep(usb_dev_handle *dev, unsigned int ep)
    // Get response
    int res = -1;
    if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbResetEp) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(&pkt, &sym);
 
       // Read result
@@ -635,7 +635,7 @@ int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
    // Get response
    int res = -1;
    if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbClearHalt) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(&pkt, &sym);
 
       // Read result
@@ -666,7 +666,7 @@ int usb_reset(usb_dev_handle *dev)
    // Get response
    int res = -1;
    if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbReset) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(&pkt, &sym);
 
       // Read result
@@ -698,7 +698,7 @@ int usb_claim_interface(usb_dev_handle *dev, int interface)
    // Get response
    int res = -1;
    if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbClaimInterface) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(&pkt, &sym);
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
@@ -727,7 +727,7 @@ int usb_release_interface(usb_dev_handle *dev, int interface)
    // Get response
    int res = -1;
    if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbReleaseInterface) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(&pkt, &sym);
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
@@ -764,11 +764,11 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
    // Get response
    int res = -1;
    if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbControlMsg) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(pkt, &sym);
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
-         sym_next(&sym);
+         iter_next(&sym);
       }
       if(sym.type == OctetType) {
          if(res > 0) {
@@ -779,7 +779,7 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
    }
 
    // Return response
-   pkt_del(pkt);
+   pkt_free(pkt);
    call_release();
    debug_msg("returned %d", res);
    return res;
@@ -808,11 +808,11 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
    unsigned char op = 0x00;
    if(pkt_recv(fd, pkt) > 0) {
       op = pkt->buf[0];
-      sym_t sym;
+      Iterator sym;
       pkt_begin(pkt, &sym);
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
-         sym_next(&sym);
+         iter_next(&sym);
       }
       if(sym.type == OctetType) {
          if(res > 0) {
@@ -823,7 +823,7 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
    }
 
    // Return response
-   pkt_del(pkt);
+   pkt_free(pkt);
    call_release();
    debug_msg("returned %d", res);
    return res;
@@ -846,16 +846,16 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
    // Get response
    int res = -1;
    if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbBulkWrite) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(pkt, &sym);
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
-         sym_next(&sym);
+         iter_next(&sym);
       }
    }
 
    // Return response
-   pkt_del(pkt);
+   pkt_free(pkt);
    call_release();
    debug_msg("returned %d", res);
    return res;
@@ -881,16 +881,16 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes, int size, int 
    // Get response
    int res = -1;
    if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbInterruptWrite) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(pkt, &sym);
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
-         sym_next(&sym);
+         iter_next(&sym);
       }
    }
 
    // Return response
-   pkt_del(pkt);
+   pkt_free(pkt);
    call_release();
    debug_msg("returned %d", res);
    return res;
@@ -915,11 +915,11 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
    unsigned char op = 0x00;
    if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbInterruptRead) {
       op = pkt->buf[0];
-      sym_t sym;
+      Iterator sym;
       pkt_begin(pkt, &sym);
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);
-         sym_next(&sym);
+         iter_next(&sym);
       }
       if(sym.type == OctetType) {
          if(res > 0) {
@@ -930,7 +930,7 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
    }
 
    // Return response
-   pkt_del(pkt);
+   pkt_free(pkt);
    call_release();
    debug_msg("returned %d", res);
    return res;
@@ -957,7 +957,7 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
    // Get response
    int res = -1;
    if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbDetachKernelDriver) {
-      sym_t sym;
+      Iterator sym;
       pkt_begin(&pkt, &sym);
       if(sym.type == IntegerType) {
          res = as_int(sym.val, sym.len);

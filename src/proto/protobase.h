@@ -90,6 +90,18 @@ int pkt_send(int fd, const char* buf, int size);
   */
 void pkt_dump(const char* pkt, uint32_t size);
 
+/** Interpret symbol as unsigned integer.
+  */
+unsigned as_uint(void* data, uint32_t bytes);
+
+/** Interpres symbol as signed integer.
+  */
+int as_int(void* data, uint32_t bytes);
+
+/** Interpret symbol as string.
+  */
+const char* as_string(void* data, uint32_t bytes);
+
 #ifdef __cplusplus
 }
 #endif

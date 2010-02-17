@@ -46,13 +46,13 @@ typedef struct {
    char* buf;
 } Packet;
 
-/** Parameter structure. */
+/** Type-Length-Value representation. */
 typedef struct {
    void *cur, *next, *end;
    uint8_t type;
    uint32_t len;
    void*    val;
-} sym_t;
+} Iterator;
 
 /** Packet manipulation interface.
  *  \todo Automatic packet size allocation.
@@ -77,7 +77,7 @@ Packet* pkt_new(uint32_t size, uint8_t op);
   * Use only with dynamically allocated packets.
   * \param pkt freed packet
   */
-void pkt_del(Packet* pkt);
+void pkt_free(Packet* pkt);
 
 /** Initialize packet.
   * \param pkt initialized packet
@@ -106,29 +106,17 @@ uint32_t pkt_recv(int fd, Packet* dst);
   * \param sym target symbol
   * \return current symbol or NULL
   */
-void* pkt_begin(Packet* pkt, sym_t* sym);
+void* pkt_begin(Packet* pkt, Iterator* sym);
 
-/** Next symbol.
-  * \return next symbol or NULL on end
+/** Shift to next item.
+  * \return next item ptr or NULL on error
   */
-void* sym_next(sym_t* sym);
+void* iter_next(Iterator* sym);
 
-/** Step in current symbol (if structural type).
-  * \return current symbol ptr
+/** Step in current structure item.
+  * \return next item ptr or NULL on error
   */
-void* sym_enter(sym_t* sym);
-
-/** Interpret symbol as unsigned integer.
-  */
-unsigned as_uint(void* data, uint32_t bytes);
-
-/** Interpres symbol as signed integer.
-  */
-int as_int(void* data, uint32_t bytes);
-
-/** Interpret symbol as string.
-  */
-const char* as_string(void* data, uint32_t bytes);
+void* iter_enter(Iterator* sym);
 
 #endif // __protocol_h__
 /** @} */
