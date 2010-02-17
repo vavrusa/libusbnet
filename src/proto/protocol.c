@@ -45,7 +45,7 @@ Packet* pkt_new(uint32_t size, uint8_t op) {
    return pkt;
 }
 
-void pkt_del(Packet* pkt) {
+void pkt_free(Packet* pkt) {
    free(pkt->buf);
    free(pkt);
 }
@@ -100,6 +100,11 @@ uint32_t pkt_recv(int fd, Packet* dst)
    return dst->size;
 }
 
+int pkt_send(Packet* pkt, int fd)
+{
+   return send(fd, pkt->buf, pkt->size, 0);
+}
+
 int pkt_append(Packet* pkt, uint8_t type, uint16_t len, void* val)
 {
    char* dst = pkt->buf + pkt->size;
@@ -121,64 +126,64 @@ int pkt_append(Packet* pkt, uint8_t type, uint16_t len, void* val)
    return written;
 }
 
-void* pkt_begin(Packet* pkt, Iterator* sym)
+void* pkt_begin(Packet* pkt, Iterator* it)
 {
    // Invalidate symbol
-   sym->type = InvalidType;
-   sym->len = 0;
-   sym->cur = sym->next = sym->end = NULL;
+   it->type = InvalidType;
+   it->len = 0;
+   it->cur = it->next = it->end = NULL;
 
    // Check packet size
    if(pkt_size(pkt) > 1) {
       uint32_t pktsize;
       int len = unpack_size(pkt->buf + 1, &pktsize);
-      sym->next = pkt->buf + 1 + len;
-      sym->end = sym->next + pktsize;
-      iter_next(sym);
+      it->next = pkt->buf + 1 + len;
+      it->end = it->next + pktsize;
+      iter_next(it);
    }
 
-   return sym->cur;
+   return it->cur;
 }
 
-void* iter_next(Iterator* sym)
+void* iter_next(Iterator* it)
 {
    // Invalidate
-   sym->type = InvalidType;
-   sym->len = 0;
+   it->type = InvalidType;
+   it->len = 0;
 
    // Check boundary
-   if(sym->next >= sym->end)
+   if(it->next >= it->end)
       return NULL;
 
    // Read type
-   sym->cur = sym->next;
-   char* p = sym->cur;
-   sym->type = *((uint8_t*) p);
+   it->cur = it->next;
+   char* p = it->cur;
+   it->type = *((uint8_t*) p);
    ++p;
 
    // Read length
-   sym->len = 0;
-   p += unpack_size(p, &sym->len);
+   it->len = 0;
+   p += unpack_size(p, &it->len);
 
    // Read value
-   sym->val = p;
+   it->val = p;
 
    // Save ptrs
-   sym->next = p + sym->len;
+   it->next = p + it->len;
 
    // Return current
-   return sym->cur;
+   return it->cur;
 }
 
-void* iter_enter(Iterator* sym)
+void* iter_enter(Iterator* it)
 {
    // Get symbol header size
    uint32_t bsize;
-   int len = unpack_size(sym->cur + 1, &bsize);
+   int len = unpack_size(it->cur + 1, &bsize);
 
    // Shift by header size and use as next
-   sym->next = sym->cur + 1 + len;
-   return iter_next(sym);
+   it->next = it->cur + 1 + len;
+   return iter_next(it);
 }
 
 /** @} */

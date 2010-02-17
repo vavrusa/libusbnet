@@ -26,9 +26,8 @@
 #define SHM_KEY  (0x2a2a2a2a)
 #define SHM_SIZE (512) // At least size of int, SHMMIN may be enforced (!)
 
-
-/** Debugging and symbol loading macros.
-  */
+/* Debugging and symbol loading macros.
+ */
 
 #ifdef __cplusplus
 extern "C"

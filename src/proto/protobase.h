@@ -78,27 +78,19 @@ int pack_size(uint32_t val, char* dst);
   */
 int unpack_size(const char* src, uint32_t* dst);
 
-/** Send packet.
-  * \param fd destination filedescriptor
-  * \param buf packet buffer
-  * \param size packet buffer size
-  * \return send() value
-  */
-int pkt_send(int fd, const char* buf, int size);
-
 /** Dump packet (debugging).
   */
 void pkt_dump(const char* pkt, uint32_t size);
 
-/** Interpret symbol as unsigned integer.
+/** Interpret data as unsigned integer.
   */
 unsigned as_uint(void* data, uint32_t bytes);
 
-/** Interpres symbol as signed integer.
+/** Interpret data as signed integer.
   */
 int as_int(void* data, uint32_t bytes);
 
-/** Interpret symbol as string.
+/** Interpret data as string.
   */
 const char* as_string(void* data, uint32_t bytes);
 

@@ -63,13 +63,6 @@ uint32_t pkt_recv_header(int fd, char *buf)
    return rcvd;
 }
 
-int pkt_send(int fd, const char* buf, int size)
-{
-   // Send buffer
-   int res = send(fd, buf, size, 0);
-   return res;
-}
-
 void pkt_dump(const char* buf, uint32_t size)
 {
    printf("Packet (%dB):", size);

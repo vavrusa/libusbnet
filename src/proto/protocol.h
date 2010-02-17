@@ -20,15 +20,15 @@
     \brief Protocol definitions and packet handling in C.
     \author Marek Vavrusa <marek@vavrusa.com>
 
-    Each entity is represented as symbol - structures and atomic types.
+    Each entity is represented as Type-Length-Value.
     Example:
        packet = 1 {     // 0x31 - Type, 0x06 - Length, is structural
          int(4B) 2;     // 0x02 - Type, 0x04 - Length, 0x02 0x00 0x00 0x00 - Value
        }
     How to parse:
-       pkt_begin(&pkt, &sym); // Read packet size and enter
-       if(sym.type == IntegerType)
-         printf("int(4B): %d\n", as_int(sym.val, sym.len));
+       pkt_begin(&pkt, &it); // Read packet size and enter
+       if(it.type == IntegerType)
+         printf("int(4B): %d\n", as_int(it.val, it.len));
 
     \addtogroup proto
     @{
@@ -101,22 +101,34 @@ int pkt_append(Packet* pkt, uint8_t type, uint16_t len, void* val);
   */
 uint32_t pkt_recv(int fd, Packet* dst);
 
-/** Return first symbol in packet.
-  * \param pkt source packet
-  * \param sym target symbol
-  * \return current symbol or NULL
+/** Send packet.
+  * \param pkt given packet
+  * \param fd destination socket descriptor
+  * \return socket send() value
   */
-void* pkt_begin(Packet* pkt, Iterator* sym);
+int pkt_send(Packet* pkt, int fd);
+
+/** Set iterator to first packet payload.
+  * \param pkt source packet
+  * \param it iterator
+  * \return current item ptr or NULL
+  */
+void* pkt_begin(Packet* pkt, Iterator* it);
 
 /** Shift to next item.
   * \return next item ptr or NULL on error
   */
-void* iter_next(Iterator* sym);
+void* iter_next(Iterator* it);
 
 /** Step in current structure item.
   * \return next item ptr or NULL on error
   */
-void* iter_enter(Iterator* sym);
+void* iter_enter(Iterator* it);
+
+/** Return item value and move to next.
+  * \return item value casted to given type
+  */
+int iter_getint(Iterator* it);
 
 #endif // __protocol_h__
 /** @} */

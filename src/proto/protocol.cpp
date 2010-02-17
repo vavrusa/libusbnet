@@ -24,6 +24,7 @@
     @{
   */
 #include "protocol.hpp"
+#include "socket.hpp"
 #include <cstring>
 #include <cstdio>
 #include <iostream>
@@ -187,6 +188,6 @@ void Packet::dump() {
 
 int Packet::send(int fd) {
    finalize();
-   return pkt_send(fd, mBuf.data(), size());
+   return ::send(fd, mBuf.data(), size(), 0);
 }
 /** @} */
