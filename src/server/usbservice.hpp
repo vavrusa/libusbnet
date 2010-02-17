@@ -25,7 +25,6 @@
 #ifndef __usbservice_hpp__
 #define __usbservice_hpp__
 #include "serversocket.hpp"
-#include "usbproto.h"
 #include "usbnet.h"
 #include <list>
 

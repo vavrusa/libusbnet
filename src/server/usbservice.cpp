@@ -24,7 +24,6 @@
   */
 #include "usbservice.hpp"
 #include "protocol.hpp"
-#include "common.h"
 #include <netinet/tcp.h>
 
 UsbService::UsbService(int fd)

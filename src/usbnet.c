@@ -27,12 +27,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/shm.h>
 #include <pthread.h>
-#include "usbnet.h"
-#include "usbproto.h"
-#include "common.h"
+#include <sys/shm.h>
 #include <netinet/in.h>
+#include "usbnet.h"
+#include "protocol.h"
 
 /** Imported from libusb-0.1/descriptors.c
  */
@@ -163,7 +162,7 @@ void usb_init(void)
 
    // Create buffer
    char buf[PACKET_MINSIZE];
-   packet_t pkt = pkt_create(buf, PACKET_MINSIZE);
+   Packet pkt = pkt_create(buf, PACKET_MINSIZE);
    pkt_init(&pkt, UsbInit);
    pkt_send(fd, pkt.buf, pkt_size(&pkt));
    call_release();
@@ -181,7 +180,7 @@ int usb_find_busses(void)
 
    // Create buffer
    char buf[32];
-   packet_t pkt = pkt_create(buf, 32);
+   Packet pkt = pkt_create(buf, 32);
    pkt_init(&pkt, UsbFindBusses);
    pkt_send(fd, pkt.buf, pkt_size(&pkt));
 
@@ -213,7 +212,7 @@ int usb_find_devices(void)
 
    // Create buffer
    char buf[4096];
-   packet_t pkt = pkt_create(buf, 4096);
+   Packet pkt = pkt_create(buf, 4096);
    pkt_init(&pkt, UsbFindDevices);
    pkt_send(fd, pkt.buf, pkt_size(&pkt));
 
@@ -439,7 +438,7 @@ usb_dev_handle *usb_open(struct usb_device *dev)
 
    // Send packet
    char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
+   Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbOpen);
    pkt_append(&pkt, IntegerType, sizeof(dev->bus->location), &dev->bus->location);
    pkt_append(&pkt, IntegerType, sizeof(dev->devnum),        &dev->devnum);
@@ -482,7 +481,7 @@ int usb_close(usb_dev_handle *dev)
 
    // Send packet
    char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
+   Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbClose);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
    pkt_send(fd, pkt.buf, pkt_size(&pkt));
@@ -513,7 +512,7 @@ int usb_set_configuration(usb_dev_handle *dev, int configuration)
 
    // Prepare packet
    char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
+   Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbSetConfiguration);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(&pkt, IntegerType, sizeof(int), &configuration);
@@ -554,7 +553,7 @@ int usb_set_altinterface(usb_dev_handle *dev, int alternate)
 
    // Prepare packet
    char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
+   Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbSetAltInterface);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(&pkt, IntegerType, sizeof(int), &alternate);
@@ -595,7 +594,7 @@ int usb_resetep(usb_dev_handle *dev, unsigned int ep)
 
    // Prepare packet
    char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
+   Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbResetEp);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(&pkt, IntegerType, sizeof(int), &ep);
@@ -627,7 +626,7 @@ int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
 
    // Prepare packet
    char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
+   Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbClearHalt);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(&pkt, IntegerType, sizeof(int), &ep);
@@ -659,7 +658,7 @@ int usb_reset(usb_dev_handle *dev)
 
    // Prepare packet
    char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
+   Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbReset);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_send(fd, pkt.buf, pkt_size(&pkt));
@@ -690,7 +689,7 @@ int usb_claim_interface(usb_dev_handle *dev, int interface)
 
    // Send packet
    char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
+   Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbClaimInterface);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
    pkt_append(&pkt, IntegerType, sizeof(int),      &interface);
@@ -719,7 +718,7 @@ int usb_release_interface(usb_dev_handle *dev, int interface)
 
    // Send packet
    char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
+   Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbReleaseInterface);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
    pkt_append(&pkt, IntegerType, sizeof(int),      &interface);
@@ -752,7 +751,7 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
    int fd = init_hostfd();
 
    // Prepare packet
-   packet_t* pkt = pkt_new(size + 128, UsbControlMsg);
+   Packet* pkt = pkt_new(size + 128, UsbControlMsg);
    pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(pkt, IntegerType, sizeof(int), &requesttype);
    pkt_append(pkt, IntegerType, sizeof(int), &request);
@@ -797,7 +796,7 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
    int fd = init_hostfd();
 
    // Prepare packet
-   packet_t* pkt = pkt_new(size + 128, UsbBulkRead);
+   Packet* pkt = pkt_new(size + 128, UsbBulkRead);
    pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(pkt, IntegerType, sizeof(int), &ep);
    pkt_append(pkt, IntegerType, sizeof(int), &size);
@@ -837,7 +836,7 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
    int fd = init_hostfd();
 
    // Prepare packet
-   packet_t* pkt = pkt_new(size + 128, UsbBulkWrite);
+   Packet* pkt = pkt_new(size + 128, UsbBulkWrite);
    pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(pkt, IntegerType, sizeof(int), &ep);
    pkt_append(pkt, OctetType,   size,        bytes);
@@ -872,7 +871,7 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes, int size, int 
    int fd = init_hostfd();
 
    // Prepare packet
-   packet_t* pkt = pkt_new(size + 128, UsbInterruptWrite);
+   Packet* pkt = pkt_new(size + 128, UsbInterruptWrite);
    pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(pkt, IntegerType, sizeof(int), &ep);
    pkt_append(pkt, OctetType,   size,        bytes);
@@ -904,7 +903,7 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
    int fd = init_hostfd();
 
    // Prepare packet
-   packet_t* pkt = pkt_new(size + 128, UsbInterruptRead);
+   Packet* pkt = pkt_new(size + 128, UsbInterruptRead);
    pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
    pkt_append(pkt, IntegerType, sizeof(int), &ep);
    pkt_append(pkt, IntegerType, sizeof(int), &size);
@@ -949,7 +948,7 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 
    // Send packet
    char buf[255];
-   packet_t pkt = pkt_create(buf, 255);
+   Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbDetachKernelDriver);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
    pkt_append(&pkt, IntegerType, sizeof(int),      &interface);

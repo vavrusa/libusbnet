@@ -27,7 +27,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-packet_t* pkt_new(uint32_t size, uint8_t op) {
+Packet* pkt_new(uint32_t size, uint8_t op) {
 
    // Minimum packet size is PACKET_MINSIZE
    if(size < PACKET_MINSIZE) {
@@ -36,7 +36,7 @@ packet_t* pkt_new(uint32_t size, uint8_t op) {
    }
 
    // Alloc packet
-   packet_t* pkt = malloc(sizeof(packet_t));
+   Packet* pkt = malloc(sizeof(Packet));
    pkt->buf = malloc(size * sizeof(char));
    pkt->bufsize = size;
 
@@ -45,12 +45,12 @@ packet_t* pkt_new(uint32_t size, uint8_t op) {
    return pkt;
 }
 
-void pkt_del(packet_t* pkt) {
+void pkt_del(Packet* pkt) {
    free(pkt->buf);
    free(pkt);
 }
 
-void pkt_init(packet_t* pkt, uint8_t op)
+void pkt_init(Packet* pkt, uint8_t op)
 {
    // Clear
    memset(pkt->buf, 0, pkt->bufsize);
@@ -63,12 +63,12 @@ void pkt_init(packet_t* pkt, uint8_t op)
    pkt->size = PACKET_MINSIZE;
 }
 
-uint32_t pkt_size(packet_t* pkt)
+uint32_t pkt_size(Packet* pkt)
 {
    return pkt->size;
 }
 
-uint32_t pkt_recv(int fd, packet_t* dst)
+uint32_t pkt_recv(int fd, Packet* dst)
 {
    // Prepare packet
    uint32_t size = 0;
@@ -100,7 +100,7 @@ uint32_t pkt_recv(int fd, packet_t* dst)
    return dst->size;
 }
 
-int pkt_append(packet_t* pkt, uint8_t type, uint16_t len, void* val)
+int pkt_append(Packet* pkt, uint8_t type, uint16_t len, void* val)
 {
    char* dst = pkt->buf + pkt->size;
 
@@ -121,7 +121,7 @@ int pkt_append(packet_t* pkt, uint8_t type, uint16_t len, void* val)
    return written;
 }
 
-void* pkt_begin(packet_t* pkt, sym_t* sym)
+void* pkt_begin(Packet* pkt, sym_t* sym)
 {
    // Invalidate symbol
    sym->type = InvalidType;

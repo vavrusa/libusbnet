@@ -11,7 +11,6 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
 set(sources   usbnet.c
               )
 set(headers   usbnet.h
-              usbproto.h
               ${SHARED_DIR}/common.h
               )
 

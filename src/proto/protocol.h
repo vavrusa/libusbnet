@@ -44,7 +44,7 @@ typedef struct {
    uint32_t bufsize;
    uint32_t size;
    char* buf;
-} packet_t;
+} Packet;
 
 /** Parameter structure. */
 typedef struct {
@@ -71,19 +71,19 @@ typedef struct {
   * \param op packet opcode
   * \return new packet
   */
-packet_t* pkt_new(uint32_t size, uint8_t op);
+Packet* pkt_new(uint32_t size, uint8_t op);
 
 /** Free allocated packet.
   * Use only with dynamically allocated packets.
   * \param pkt freed packet
   */
-void pkt_del(packet_t* pkt);
+void pkt_del(Packet* pkt);
 
 /** Initialize packet.
   * \param pkt initialized packet
   * \param op packet opcode
   */
-void pkt_init(packet_t* pkt, uint8_t op);
+void pkt_init(Packet* pkt, uint8_t op);
 
 /** Append parameter to packet.
   * \param pkt packet
@@ -92,21 +92,21 @@ void pkt_init(packet_t* pkt, uint8_t op);
   * \param val  parameter value
   * \return bytes written
   */
-int pkt_append(packet_t* pkt, uint8_t type, uint16_t len, void* val);
+int pkt_append(Packet* pkt, uint8_t type, uint16_t len, void* val);
 
 /** Receive packet.
   * \param fd source fd
   * \param dst destination packet
   * \return packet size on success, 0 on error
   */
-uint32_t pkt_recv(int fd, packet_t* dst);
+uint32_t pkt_recv(int fd, Packet* dst);
 
 /** Return first symbol in packet.
   * \param pkt source packet
   * \param sym target symbol
   * \return current symbol or NULL
   */
-void* pkt_begin(packet_t* pkt, sym_t* sym);
+void* pkt_begin(Packet* pkt, sym_t* sym);
 
 /** Next symbol.
   * \return next symbol or NULL on end
