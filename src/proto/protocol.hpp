@@ -29,16 +29,20 @@
 #include <string>
 #include <vector>
 
+/** C++ protocol abstraction. */
+namespace Proto
+{
+
 /* Types */
-typedef std::string buffer_t;
+typedef std::string ByteBuffer;
 
 /** Class contains data in given BER structure (block).
     Suitable for reading and writing blocks, TLV attributes, raw values.
   */
-class Block
+class Struct
 {
    public:
-   Block(buffer_t& sharedbuf, int pos = -1);
+   Struct(ByteBuffer& sharedbuf, int pos = -1);
 
    /** Return block size. */
    virtual size_t size() {
@@ -61,70 +65,70 @@ class Block
    }
 
    /** Push raw byte. */
-   Block& push(char ch) {
+   Struct& push(char ch) {
       mBuf.insert(mCursor, 1, (char) ch);
       ++mSize; ++mCursor;
       return *this;
    }
 
    /** Write encoded length. */
-   Block& pushPacked(uint32_t val);
+   Struct& pushPacked(uint32_t val);
 
    /** Append raw data. */
-   Block& append(const char* str, size_t size = 0);
+   Struct& append(const char* str, size_t size = 0);
 
    /** Finalize block, insert block size in header. */
-   Block& finalize();
+   Struct& finalize();
 
    /** Begin new block. */
-   Block writeBlock(uint8_t type = InvalidType) {
-      Block block(mBuf, mBuf.size());
+   Struct writeBlock(uint8_t type = InvalidType) {
+      Struct block(mBuf, mBuf.size());
       if(type != InvalidType)
          block.push(type);
       return block;
    }
 
    /** Add encoded numeric value. */
-   Block& addNumeric(uint8_t type, uint8_t len, uint32_t val = 0);
+   Struct& addNumeric(uint8_t type, uint8_t len, uint32_t val = 0);
 
    /** Add octet string. */
-   Block& addString(const char* str, uint8_t type = OctetType);
+   Struct& addString(const char* str, uint8_t type = OctetType);
 
    /** Add boolean. */
-   Block& addBool(bool val) {
+   Struct& addBool(bool val) {
       return addNumeric(BoolType, 1, (uint8_t) val);
    }
 
    /** Add raw data. */
-   Block& addData(const char* data, size_t size, uint8_t type = RawType);
+   Struct& addData(const char* data, size_t size, uint8_t type = RawType);
 
    /* Integer encoding - 8,16,32 bits */
-   Block& addUInt8(uint8_t val) {
+   Struct& addUInt8(uint8_t val) {
       return addNumeric(IntegerType, 1, val);
    }
-   Block& addUInt16(uint16_t val) {
+   Struct& addUInt16(uint16_t val) {
       return addNumeric(IntegerType, 2, val);
    }
-   Block& addUInt32(uint32_t val) {
+   Struct& addUInt32(uint32_t val) {
       return addNumeric(IntegerType, 4, val);
    }
-   Block& addInt8(int8_t val) {
+   Struct& addInt8(int8_t val) {
       return addNumeric(IntegerType, 1, val);
    }
-   Block& addInt16(int16_t val) {
+   Struct& addInt16(int16_t val) {
       return addNumeric(IntegerType, 2, val);
    }
-   Block& addInt32(int32_t val) {
+   Struct& addInt32(int32_t val) {
       return addNumeric(IntegerType, 4, val);
    }
 
    protected:
-   void setbuf(buffer_t& buf) {
+   void setbuf(ByteBuffer& buf) {
       mBuf = buf;
    }
 
    private:
-      buffer_t& mBuf;
+      ByteBuffer& mBuf;
       int mPos, mCursor, mSize;
 };
 
@@ -133,10 +137,10 @@ class Block
     Contains information about Type, Length and Value with
     conversion methods.
   */
-class Symbol
+class Iterator
 {
    public:
-      Symbol(Block& block)
+      Iterator(Struct& block)
          : mType(InvalidType), mLength(0), mValue(0), mBlock(block), mPos(0)
       {
          enter();
@@ -204,20 +208,20 @@ class Symbol
       uint8_t  mType;
       uint32_t mLength;
       const char* mValue;
-      Block& mBlock;
+      Struct& mBlock;
       int mPos;
 };
 
 
 /** Packet C++ abstraction.
   */
-class Packet : public Block
+class Packet : public Struct
 {
    public:
 
    /** Create on new/existing buffer. */
    Packet(uint8_t op = InvalidType)
-      : Block(mBuf, 0) {
+      : Struct(mBuf, 0) {
       if(op != InvalidType) {
          push(op);
       }
@@ -255,6 +259,8 @@ class Packet : public Block
    private:
    std::string mBuf;
 };
+
+}
 
 #endif // __protocol_hpp__
 /** @} */

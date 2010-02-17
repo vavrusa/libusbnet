@@ -27,6 +27,7 @@
 #define __serversocket_hpp__
 #include "socket.hpp"
 #include "protocol.hpp"
+using namespace Proto;
 
 /** Server socket reimplementation. */
 class ServerSocket : public Socket

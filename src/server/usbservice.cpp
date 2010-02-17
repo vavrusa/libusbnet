@@ -122,7 +122,7 @@ void UsbService::usb_find_devices(int fd, Packet& in)
          struct usb_device *root_dev;
        */
 
-      Block block = pkt.writeBlock(StructureType);
+      Struct block = pkt.writeBlock(StructureType);
       block.addString(bus->dirname);
       block.addUInt32(bus->location);
 
@@ -131,7 +131,7 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 
          log_msg("Bus %s Device %s: ID %04x:%04x",
                 bus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
-         Block devBlock = block.writeBlock(SequenceType);
+         Struct devBlock = block.writeBlock(SequenceType);
 
          //! \todo Fix raw structures byte order in integer members.
          devBlock.addString(dev->filename);
@@ -170,7 +170,7 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 
 void UsbService::usb_open(int fd, Packet& in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int busid = sym.asInt();
    sym.next();
    int devid = sym.asInt();
@@ -221,7 +221,7 @@ void UsbService::usb_open(int fd, Packet& in)
 
 void UsbService::usb_close(int fd, Packet& in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt();
 
    // Find open device
@@ -246,7 +246,7 @@ void UsbService::usb_close(int fd, Packet& in)
 
 void UsbService::usb_set_configuration(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
    int configuration = sym.asInt();
 
@@ -273,7 +273,7 @@ void UsbService::usb_set_configuration(int fd, Packet &in)
 
 void UsbService::usb_set_altinterface(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
    int alternate = sym.asInt();
 
@@ -300,7 +300,7 @@ void UsbService::usb_set_altinterface(int fd, Packet &in)
 
 void UsbService::usb_resetep(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
    int ep = sym.asInt();
 
@@ -325,7 +325,7 @@ void UsbService::usb_resetep(int fd, Packet &in)
 
 void UsbService::usb_clear_halt(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
    int ep = sym.asInt();
 
@@ -350,7 +350,7 @@ void UsbService::usb_clear_halt(int fd, Packet &in)
 
 void UsbService::usb_reset(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt();
 
    // Find open device
@@ -374,7 +374,7 @@ void UsbService::usb_reset(int fd, Packet &in)
 
 void UsbService::usb_claim_interface(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
    int index = sym.asInt();
    int res = -1;
@@ -400,7 +400,7 @@ void UsbService::usb_claim_interface(int fd, Packet &in)
 
 void UsbService::usb_release_interface(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
    int index = sym.asInt();
    int res = -1;
@@ -426,7 +426,7 @@ void UsbService::usb_release_interface(int fd, Packet &in)
 
 void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
    int index = sym.asInt();
 
@@ -455,7 +455,7 @@ void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
 
 void UsbService::usb_control_msg(int fd, Packet& in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
 
    // Find open device
@@ -495,7 +495,7 @@ void UsbService::usb_control_msg(int fd, Packet& in)
 
 void UsbService::usb_bulk_read(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
 
    // Find open device
@@ -535,7 +535,7 @@ void UsbService::usb_bulk_read(int fd, Packet &in)
 
 void UsbService::usb_bulk_write(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
 
    // Find open device
@@ -569,7 +569,7 @@ void UsbService::usb_bulk_write(int fd, Packet &in)
 
 void UsbService::usb_interrupt_write(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
 
    // Find open device
@@ -603,7 +603,7 @@ void UsbService::usb_interrupt_write(int fd, Packet &in)
 
 void UsbService::usb_interrupt_read(int fd, Packet &in)
 {
-   Symbol sym(in);
+   Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
 
    // Find open device

@@ -29,8 +29,9 @@
 #include <cstdio>
 #include <iostream>
 #include <iomanip>
+using namespace Proto;
 
-Block::Block(buffer_t& sharedbuf, int pos)
+Struct::Struct(ByteBuffer& sharedbuf, int pos)
    : mBuf(sharedbuf), mPos(pos), mCursor(0), mSize(0)
 {
    // Seek end pos
@@ -40,7 +41,7 @@ Block::Block(buffer_t& sharedbuf, int pos)
    mCursor = mPos;
 }
 
-Block& Block::pushPacked(uint32_t val)
+Struct& Struct::pushPacked(uint32_t val)
 {
    // Pack number and append
    char buf[6];
@@ -49,7 +50,7 @@ Block& Block::pushPacked(uint32_t val)
    return *this;
 }
 
-Block& Block::append(const char* str, size_t size) {
+Struct& Struct::append(const char* str, size_t size) {
    if(str != NULL) {
       if(size == 0)
          size = strlen(str);
@@ -61,7 +62,7 @@ Block& Block::append(const char* str, size_t size) {
    return *this;
 }
 
-Block& Block::addNumeric(uint8_t type, uint8_t len, uint32_t val)
+Struct& Struct::addNumeric(uint8_t type, uint8_t len, uint32_t val)
 {
    // Check
    if(len != sizeof(uint32_t) &&
@@ -84,7 +85,7 @@ Block& Block::addNumeric(uint8_t type, uint8_t len, uint32_t val)
    return *this;
 }
 
-Block& Block::addData(const char* data, size_t size, uint8_t type)
+Struct& Struct::addData(const char* data, size_t size, uint8_t type)
 {
    push((uint8_t) type);
    pushPacked(size);
@@ -92,7 +93,7 @@ Block& Block::addData(const char* data, size_t size, uint8_t type)
 }
 
 
-Block& Block::addString(const char* str, uint8_t type)
+Struct& Struct::addString(const char* str, uint8_t type)
 {
    if(str != 0) {
       int len = strlen(str) + 1; // NULL byte
@@ -104,7 +105,7 @@ Block& Block::addString(const char* str, uint8_t type)
    return *this;
 }
 
-Block& Block::finalize()
+Struct& Struct::finalize()
 {
    // Remaining bufsize
    uint32_t block_size = mBuf.size() - startPos() - 1;
@@ -117,7 +118,7 @@ Block& Block::finalize()
    return *this;
 }
 
-bool Symbol::next()
+bool Iterator::next()
 {
    if(mPos >= mBlock.size())
       return false;
@@ -142,7 +143,7 @@ bool Symbol::next()
    return true;
 }
 
-bool Symbol::enter()
+bool Iterator::enter()
 {
    // Shift type
    ++mPos;

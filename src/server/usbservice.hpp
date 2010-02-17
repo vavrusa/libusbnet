@@ -27,6 +27,7 @@
 #include "serversocket.hpp"
 #include "usbnet.h"
 #include <list>
+using namespace Proto;
 
 class UsbService : public ServerSocket
 {
