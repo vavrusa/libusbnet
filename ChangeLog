@@ -1,3 +1,12 @@
+*   - Created Doxygen API documentation.
+
+0.4 - All essential libusb function calls wrapped.
+    - Device configuration manipulators.
+    - Interrupt transfers.
+
+0.3 - Implemented SSH authentication.
+    - Debug and error logging macros.
+
 0.2 - Protocol C and C++ API (ASN.1/BER subset)
     - Wrapped core functions and bulk transfers
     - Global call locking

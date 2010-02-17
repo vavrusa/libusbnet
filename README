@@ -1,23 +1,28 @@
 libusb over TCP/IP
-==================
+------------------
 
 libusbnet is a wrapper for libusb library
 to enable communication with USB devices over
 TCP/IP.
 
 Installation
-============
+------------
 mkdir build && cd build # Create build directory
 cmake ..                # Create Makefiles using CMake
 make
 sudo make install
 
 Usage
-=====
+-----
+Example: Probing remote USB bus with libusb.
+john@server# usbexportd
+jack@client# usbnet -h server:22222 -l libusbnet.so "lsusb" (without authentication)
+jack@client# usbnet -a jack@server "lsusb" (with SSH authentication)
+
 See "usbnet --help".
 
 SSH authentication
-==================
+------------------
 See SSH_HOWTO for more information.
 
 ---

@@ -14,9 +14,10 @@
 
     \section usage Example usage (probing remote USB bus).
     \code
-    server-user@server# usbexportd
-    client-user@client: usbnet -h server:22222 -l libusbnet.so "lsusb"
+    john@server# usbexportd
+    jack@client# usbnet -h server:22222 -l libusbnet.so "lsusb"
     \endcode
+    See "usbnet --help".
 */
 
 /* Modules. */
