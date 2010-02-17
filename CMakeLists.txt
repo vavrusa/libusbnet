@@ -23,14 +23,18 @@ include(${CMAKE_MODULE_PATH}/FindUSB.cmake)
 find_package(USB REQUIRED)
 include_directories(${LIBUSB_INCLUDE_DIR})
 
+# Documentation
+set(DOCUMENTATION_DIR "${CMAKE_SOURCE_DIR}/doc")
+include(${CMAKE_MODULE_PATH}/Doxygen.cmake)
+
 # Subdirectories
 add_subdirectory(src)
 
 # Uninstall
 CONFIGURE_FILE(
-          "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
-          "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+          "${CMAKE_MODULE_PATH}/UninstallTarget.cmake.in"
+          "${CMAKE_CURRENT_BINARY_DIR}/UninstallTarget.cmake"
           IMMEDIATE @ONLY)
 
 ADD_CUSTOM_TARGET(uninstall
-          "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+          "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/UninstallTarget.cmake")
