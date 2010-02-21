@@ -829,7 +829,7 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
    return res;
 }
 
-int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
+int usb_bulk_write(usb_dev_handle *dev, int ep, const char *bytes, int size, int timeout)
 {
    // Get remote fd
    call_lock();
@@ -864,7 +864,7 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
 /* libusb(5):
  * Interrupt transfers.
  */
-int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
+int usb_interrupt_write(usb_dev_handle *dev, int ep, const char *bytes, int size, int timeout)
 {
    // Get remote fd
    call_lock();
