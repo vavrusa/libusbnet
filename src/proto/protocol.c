@@ -31,7 +31,7 @@ Packet* pkt_new(uint32_t size, uint8_t op) {
 
    // Minimum packet size is PACKET_MINSIZE
    if(size < PACKET_MINSIZE) {
-      fprintf(stderr, "%s: minimum packet size is %dB\n", __func__, PACKET_MINSIZE);
+      fprintf(stderr, "%s: minimum packet size is %ldB\n", __func__, PACKET_MINSIZE);
       size = PACKET_MINSIZE;
    }
 

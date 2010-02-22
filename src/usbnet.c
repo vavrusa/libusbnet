@@ -500,7 +500,7 @@ int usb_close(usb_dev_handle *dev)
    }
 
    call_release();
-   debug_msg("returned %", res);
+   debug_msg("returned %d", res);
    return res;
 }
 
