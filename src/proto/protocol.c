@@ -105,7 +105,7 @@ int pkt_send(Packet* pkt, int fd)
    return send(fd, pkt->buf, pkt->size, 0);
 }
 
-int pkt_append(Packet* pkt, uint8_t type, uint16_t len, void* val)
+int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val)
 {
    char* dst = pkt->buf + pkt->size;
 
@@ -173,6 +173,13 @@ void* iter_next(Iterator* it)
 
    // Return current
    return it->cur;
+}
+
+void* iter_nextval(Iterator* it)
+{
+   void* val = it->val;
+   iter_next(it);
+   return val;
 }
 
 void* iter_enter(Iterator* it)

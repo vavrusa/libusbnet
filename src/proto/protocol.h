@@ -79,6 +79,10 @@ typedef struct {
   */
 #define pkt_create(buf, size) { size, 0, buf }
 
+/** Return packet opcode.
+  */
+#define pkt_op(pkt) (pkt.buf[0])
+
 /** Allocate new packet.
   * Minimal packet size is 1 + 4B.
   * \param size required packet size
@@ -106,7 +110,7 @@ void pkt_init(Packet* pkt, uint8_t op);
   * \param val  parameter value
   * \return bytes written
   */
-int pkt_append(Packet* pkt, uint8_t type, uint16_t len, void* val);
+int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val);
 
 /** Receive packet.
   * \param fd source fd
@@ -134,15 +138,26 @@ void* pkt_begin(Packet* pkt, Iterator* it);
   */
 void* iter_next(Iterator* it);
 
+/** Return current item value and shift to next item.
+  * \return current item value
+  */
+void* iter_nextval(Iterator* it);
+
 /** Step in current structure item.
   * \return next item ptr or NULL on error
   */
 void* iter_enter(Iterator* it);
 
 /** Return item value and move to next.
+  * \param it iterator
+  * \param convf conversion function ptr
   * \return item value casted to given type
+  * \private
   */
-int iter_getint(Iterator* it);
+#define iter_getval(it, convf) convf(iter_nextval((it)), it->len)
+
+/** Return item as integer and move to next. */
+#define iter_getint(it) (iter_getval((it), (&as_int)))
 
 #endif // __protocol_h__
 /** @} */

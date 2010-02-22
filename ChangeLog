@@ -1,4 +1,6 @@
 *   - Created Doxygen API documentation.
+    - Code refactoring.
+    - Namespaces in C++ API.
 
 0.4 - All essential libusb function calls wrapped.
     - Device configuration manipulators.
