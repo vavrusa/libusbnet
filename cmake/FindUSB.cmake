@@ -10,6 +10,7 @@
 # Redistribution and use is allowed according to the terms of the BSD license.
 # For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 
+INCLUDE (CheckCSourceCompiles)
 
 if (LIBUSB_INCLUDE_DIR AND LIBUSB_LIBRARIES)
 
@@ -34,5 +35,21 @@ else (LIBUSB_INCLUDE_DIR AND LIBUSB_LIBRARIES)
   FIND_PACKAGE_HANDLE_STANDARD_ARGS(LIBUSB DEFAULT_MSG LIBUSB_LIBRARIES LIBUSB_INCLUDE_DIR)
 
   MARK_AS_ADVANCED(LIBUSB_INCLUDE_DIR LIBUSB_LIBRARIES)
+
+  # Check if buffer parameters are const.
+  SET(CMAKE_REQUIRED_INCLUDES "${LIBUSB_INCLUDE_DIR}")
+  SET(CMAKE_REQUIRED_LIBRARIES "${LIBUSB_LIBRARIES}")
+  CHECK_C_SOURCE_COMPILES("
+#include <usb.h>
+int usb_bulk_write(usb_dev_handle *dev, int ep, const char *bytes, int size,
+        int timeout){}
+int usb_interrupt_write(usb_dev_handle *dev, int ep, const char *bytes,
+	int size, int timeout){}
+int main()
+{
+    usb_init();
+    return 0;
+}
+" LIBUSB_CONST_BUFFERS)
 
 endif (LIBUSB_INCLUDE_DIR AND LIBUSB_LIBRARIES)

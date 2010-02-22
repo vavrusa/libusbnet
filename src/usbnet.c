@@ -33,6 +33,12 @@
 #include "usbnet.h"
 #include "protocol.h"
 
+#ifdef USE_USB_CONST_BUFFERS
+typedef const char *usb_buf_t;
+#else
+typedef char *usb_buf_t;
+#endif
+
 /** Imported from libusb-0.1/descriptors.c
  */
 static void usb_destroy_configuration(struct usb_device *dev);
@@ -829,7 +835,7 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
    return res;
 }
 
-int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
+int usb_bulk_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int timeout)
 {
    // Get remote fd
    call_lock();
@@ -864,7 +870,7 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeo
 /* libusb(5):
  * Interrupt transfers.
  */
-int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
+int usb_interrupt_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int timeout)
 {
    // Get remote fd
    call_lock();

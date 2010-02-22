@@ -22,6 +22,9 @@ endif(${CMAKE_BUILD_TYPE} STREQUAL Debug)
 include(${CMAKE_MODULE_PATH}/FindUSB.cmake)
 find_package(USB REQUIRED)
 include_directories(${LIBUSB_INCLUDE_DIR})
+if(${LIBUSB_CONST_BUFFERS})
+   add_definitions(-DUSE_USB_CONST_BUFFERS)
+endif(${LIBUSB_CONST_BUFFERS})
 
 # Documentation
 set(DOCUMENTATION_DIR "${CMAKE_SOURCE_DIR}/doc")
