@@ -58,7 +58,7 @@ static void call_release() {
 static int __remote_fd = -1;
 
 //! Remote USB busses with devices
-static struct usb_bus* __remote_bus = 0;
+static struct usb_bus* __remote_bus = NULL;
 extern struct usb_bus* usb_busses;
 
 /* Global variables manipulators.
@@ -373,8 +373,7 @@ int usb_find_devices(void)
 
                // Read devnum
                dev->devnum = iter_getuint(&it);
-
-               log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
+               //log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
             }
 
             // Free unused devices
@@ -400,10 +399,11 @@ int usb_find_devices(void)
       }
 
       // Save busses
-      __remote_bus = vbus.next;
+      if(__remote_bus == NULL) {
+         debug_msg("overriding global usb_busses from %p to %p", usb_busses, vbus.next);
+      }
 
-      // Override original variable
-      debug_msg("overriding global usb_busses on %p", usb_busses);
+      __remote_bus = vbus.next;
       usb_busses = __remote_bus;
    }
 
@@ -436,8 +436,8 @@ usb_dev_handle *usb_open(struct usb_device *dev)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbOpen);
-   pkt_append(&pkt, UnsignedType, sizeof(dev->bus->location), &dev->bus->location);
-   pkt_append(&pkt, UnsignedType, sizeof(dev->devnum),        &dev->devnum);
+   pkt_adduint(&pkt, sizeof(dev->bus->location), &dev->bus->location);
+   pkt_adduint(&pkt, sizeof(dev->devnum),        &dev->devnum);
    pkt_send(&pkt, fd);
 
    // Get response
@@ -474,7 +474,7 @@ int usb_close(usb_dev_handle *dev)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbClose);
-   pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
+   pkt_addint(&pkt, sizeof(dev->fd),  &dev->fd);
    pkt_send(&pkt, fd);
 
    // Free device
@@ -503,8 +503,8 @@ int usb_set_configuration(usb_dev_handle *dev, int configuration)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbSetConfiguration);
-   pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(&pkt, IntegerType, sizeof(int), &configuration);
+   pkt_addint(&pkt, sizeof(dev->fd), &dev->fd);
+   pkt_addint(&pkt, sizeof(int), &configuration);
    pkt_send(&pkt, fd);
 
    // Get response
@@ -539,8 +539,8 @@ int usb_set_altinterface(usb_dev_handle *dev, int alternate)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbSetAltInterface);
-   pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(&pkt, IntegerType, sizeof(int), &alternate);
+   pkt_addint(&pkt, sizeof(dev->fd), &dev->fd);
+   pkt_addint(&pkt, sizeof(int), &alternate);
    pkt_send(&pkt, fd);
 
    // Get response
@@ -575,8 +575,8 @@ int usb_resetep(usb_dev_handle *dev, unsigned int ep)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbResetEp);
-   pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(&pkt, UnsignedType, sizeof(ep), &ep);
+   pkt_addint(&pkt,  sizeof(dev->fd), &dev->fd);
+   pkt_adduint(&pkt, sizeof(ep), &ep);
    pkt_send(&pkt, fd);
 
    // Get response
@@ -605,8 +605,8 @@ int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbClearHalt);
-   pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(&pkt, UnsignedType, sizeof(ep), &ep);
+   pkt_addint(&pkt, sizeof(dev->fd), &dev->fd);
+   pkt_adduint(&pkt, sizeof(ep), &ep);
    pkt_send(&pkt, fd);
 
    // Get response
@@ -635,7 +635,7 @@ int usb_reset(usb_dev_handle *dev)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbReset);
-   pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
+   pkt_addint(&pkt, sizeof(dev->fd), &dev->fd);
    pkt_send(&pkt, fd);
 
    // Get response
@@ -664,8 +664,8 @@ int usb_claim_interface(usb_dev_handle *dev, int interface)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbClaimInterface);
-   pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
-   pkt_append(&pkt, IntegerType, sizeof(int),      &interface);
+   pkt_addint(&pkt, sizeof(dev->fd),  &dev->fd);
+   pkt_addint(&pkt, sizeof(int),      &interface);
    pkt_send(&pkt, fd);
 
    // Get response
@@ -691,8 +691,8 @@ int usb_release_interface(usb_dev_handle *dev, int interface)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbReleaseInterface);
-   pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
-   pkt_append(&pkt, IntegerType, sizeof(int),      &interface);
+   pkt_addint(&pkt, sizeof(dev->fd),  &dev->fd);
+   pkt_addint(&pkt, sizeof(int),      &interface);
    pkt_send(&pkt, fd);
 
    // Get response
@@ -721,13 +721,13 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
 
    // Prepare packet
    Packet* pkt = pkt_new(size + 128, UsbControlMsg);
-   pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(pkt, IntegerType, sizeof(int), &requesttype);
-   pkt_append(pkt, IntegerType, sizeof(int), &request);
-   pkt_append(pkt, IntegerType, sizeof(int), &value);
-   pkt_append(pkt, IntegerType, sizeof(int), &index);
-   pkt_append(pkt, OctetType,   size,        bytes);
-   pkt_append(pkt, IntegerType, sizeof(int), &timeout);
+   pkt_addint(pkt, sizeof(dev->fd), &dev->fd);
+   pkt_addint(pkt, sizeof(int), &requesttype);
+   pkt_addint(pkt, sizeof(int), &request);
+   pkt_addint(pkt, sizeof(int), &value);
+   pkt_addint(pkt, sizeof(int), &index);
+   pkt_addraw(pkt, size,        bytes);
+   pkt_addint(pkt, sizeof(int), &timeout);
    pkt_send(pkt, fd);
 
    // Get response
@@ -763,10 +763,10 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
 
    // Prepare packet
    Packet* pkt = pkt_new(size + 128, UsbBulkRead);
-   pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(pkt, IntegerType, sizeof(int), &ep);
-   pkt_append(pkt, IntegerType, sizeof(int), &size);
-   pkt_append(pkt, IntegerType, sizeof(int), &timeout);
+   pkt_addint(pkt, sizeof(dev->fd), &dev->fd);
+   pkt_addint(pkt, sizeof(int), &ep);
+   pkt_addint(pkt, sizeof(int), &size);
+   pkt_addint(pkt, sizeof(int), &timeout);
    pkt_send(pkt, fd);
 
    // Get response
@@ -799,10 +799,10 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int t
 
    // Prepare packet
    Packet* pkt = pkt_new(size + 128, UsbBulkWrite);
-   pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(pkt, IntegerType, sizeof(int), &ep);
-   pkt_append(pkt, OctetType,   size,        bytes);
-   pkt_append(pkt, IntegerType, sizeof(int), &timeout);
+   pkt_addint(pkt, sizeof(dev->fd), &dev->fd);
+   pkt_addint(pkt, sizeof(int), &ep);
+   pkt_addraw(pkt, size,        bytes);
+   pkt_addint(pkt, sizeof(int), &timeout);
    pkt_send(pkt, fd);
 
    // Get response
@@ -831,10 +831,10 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, 
 
    // Prepare packet
    Packet* pkt = pkt_new(size + 128, UsbInterruptWrite);
-   pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(pkt, IntegerType, sizeof(int), &ep);
-   pkt_append(pkt, OctetType,   size,        bytes);
-   pkt_append(pkt, IntegerType, sizeof(int), &timeout);
+   pkt_addint(pkt, sizeof(dev->fd), &dev->fd);
+   pkt_addint(pkt, sizeof(int), &ep);
+   pkt_addraw(pkt, size,        bytes);
+   pkt_addint(pkt, sizeof(int), &timeout);
    pkt_send(pkt, fd);
 
    // Get response
@@ -860,17 +860,15 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
 
    // Prepare packet
    Packet* pkt = pkt_new(size + 128, UsbInterruptRead);
-   pkt_append(pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(pkt, IntegerType, sizeof(int), &ep);
-   pkt_append(pkt, IntegerType, sizeof(int), &size);
-   pkt_append(pkt, IntegerType, sizeof(int), &timeout);
+   pkt_addint(pkt, sizeof(dev->fd), &dev->fd);
+   pkt_addint(pkt, sizeof(int), &ep);
+   pkt_addint(pkt, sizeof(int), &size);
+   pkt_addint(pkt, sizeof(int), &timeout);
    pkt_send(pkt, fd);
 
    // Get response
    int res = -1;
-   unsigned char op = 0x00;
    if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbInterruptRead) {
-      op = pkt->buf[0];
       Iterator it;
       pkt_begin(pkt, &it);
       res = iter_getint(&it);
@@ -903,8 +901,8 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbDetachKernelDriver);
-   pkt_append(&pkt, IntegerType, sizeof(dev->fd),  &dev->fd);
-   pkt_append(&pkt, IntegerType, sizeof(int),      &interface);
+   pkt_addint(&pkt, sizeof(dev->fd),  &dev->fd);
+   pkt_addint(&pkt, sizeof(int),      &interface);
    pkt_send(&pkt, fd);
 
    // Get response
