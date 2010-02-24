@@ -84,6 +84,12 @@ uint32_t pkt_recv(int fd, Packet* dst)
    int len = unpack_size(dst->buf + 1, &pending);
    char* ptr = dst->buf + 1 + len;
 
+   // Assert
+   if((pending + size) > dst->bufsize) {
+      err_msg("packet bufsize too small, bufsize: %u packet size: %u.", dst->bufsize, pending + size);
+      exit(1);
+   }
+
    // Receive payload
    if(pending > 0) {
       if((size = recv_full(fd, ptr, pending)) == 0)
@@ -145,6 +151,11 @@ void* pkt_begin(Packet* pkt, Iterator* it)
    return it->cur;
 }
 
+int iter_end(Iterator* it)
+{
+   return (it->cur >= it->end);
+}
+
 void* iter_next(Iterator* it)
 {
    // Invalidate
@@ -152,8 +163,10 @@ void* iter_next(Iterator* it)
    it->len = 0;
 
    // Check boundary
-   if(it->next >= it->end)
+   if(it->next >= it->end) {
+      it->cur = it->next;
       return NULL;
+   }
 
    // Read type
    it->cur = it->next;

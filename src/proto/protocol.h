@@ -81,7 +81,7 @@ typedef struct {
 
 /** Return packet opcode.
   */
-#define pkt_op(pkt) (pkt.buf[0])
+#define pkt_op(pkt) ((pkt)->buf[0])
 
 /** Allocate new packet.
   * Minimal packet size is 1 + 4B.
@@ -112,6 +112,15 @@ void pkt_init(Packet* pkt, uint8_t op);
   */
 int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val);
 
+/** Append integer. */
+#define pkt_addint(pkt,len,val) pkt_append((pkt), IntegerType, (len), (val))
+
+/** Append unsigned. */
+#define pkt_adduint(pkt,len,val) pkt_append((pkt), UnsignedType, (len), (val))
+
+/** Append string. */
+#define pkt_addstr(pkt,len,val) pkt_append((pkt), OctetType, (len), (val))
+
 /** Receive packet.
   * \param fd source fd
   * \param dst destination packet
@@ -132,6 +141,12 @@ int pkt_send(Packet* pkt, int fd);
   * \return current item ptr or NULL
   */
 void* pkt_begin(Packet* pkt, Iterator* it);
+
+
+/** Return true on iterator end.
+  * \return true if iterator is at lastpos + 1
+  */
+int iter_end(Iterator*);
 
 /** Shift to next item.
   * \return next item ptr or NULL on error
@@ -158,6 +173,12 @@ void* iter_enter(Iterator* it);
 
 /** Return item as integer and move to next. */
 #define iter_getint(it) (iter_getval((it), (&as_int)))
+
+/** Return item as unsigned and move to next. */
+#define iter_getuint(it) (iter_getval((it), (&as_uint)))
+
+/** Return item as string and move to next. */
+#define iter_getstr(it) (iter_getval((it), (&as_string)))
 
 #endif // __protocol_h__
 /** @} */

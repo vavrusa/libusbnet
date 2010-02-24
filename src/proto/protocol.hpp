@@ -126,13 +126,13 @@ class Struct
 
    /* Integer encoding - 8,16,32 bits */
    Struct& addUInt8(uint8_t val) {
-      return addNumeric(IntegerType, 1, val);
+      return addNumeric(UnsignedType, 1, val);
    }
    Struct& addUInt16(uint16_t val) {
-      return addNumeric(IntegerType, 2, val);
+      return addNumeric(UnsignedType, 2, val);
    }
    Struct& addUInt32(uint32_t val) {
-      return addNumeric(IntegerType, 4, val);
+      return addNumeric(UnsignedType, 4, val);
    }
    Struct& addInt8(int8_t val) {
       return addNumeric(IntegerType, 1, val);
