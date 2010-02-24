@@ -177,7 +177,9 @@ void usb_init(void)
    debug_msg("called");
 }
 
-/** Find busses on remote host. */
+/** Find busses on remote host.
+    \warning Does not transfer busses to local virtual bus list.
+  */
 int usb_find_busses(void)
 {
   // Get remote fd
@@ -193,10 +195,9 @@ int usb_find_busses(void)
    // Get number of changes
    int res = 0;
    Iterator it;
-   if(pkt_recv(fd, &pkt) > 0) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbFindBusses) {
       if(pkt_begin(&pkt, &it) != NULL) {
-         if(it.type == IntegerType)
-            res = as_uint(it.val, it.len);
+         res = iter_getint(&it);
       }
    }
 
@@ -229,9 +230,7 @@ int usb_find_devices(void)
       pkt_begin(&pkt, &it);
 
       // Get return value
-      if(it.type == IntegerType) {
-         res = as_uint(it.val, it.len);
-      }
+      res = iter_getint(&it);
 
       // Allocate virtualbus
       struct usb_bus vbus;
@@ -239,7 +238,7 @@ int usb_find_devices(void)
       struct usb_bus* rbus = &vbus;
 
       // Get busses
-      while(iter_next(&it) != NULL) {
+      while(!iter_end(&it)) {
 
          // Evaluate
          if(it.type == StructureType) {
@@ -259,16 +258,10 @@ int usb_find_devices(void)
                rbus = rbus->next;
 
             // Read dirname
-            if(it.type == OctetType) {
-               strcpy(rbus->dirname, as_string(it.val, it.len));
-               iter_next(&it);
-            }
+            strcpy(rbus->dirname, iter_getstr(&it));
 
             // Read location
-            if(it.type == IntegerType) {
-               rbus->location = as_int(it.val, it.len);
-               iter_next(&it);
-            }
+            rbus->location = iter_getuint(&it);
 
             // Read devices
             struct usb_device vdev;
@@ -291,16 +284,14 @@ int usb_find_devices(void)
                dev = dev->next;
 
                // Read filename
-               if(it.type == OctetType) {
-                  strcpy(dev->filename, as_string(it.val, it.len));
-                  iter_next(&it);
-               }
+               strcpy(dev->filename, iter_getstr(&it));
 
                // Read description
-               if(it.type == RawType) {
-                  memcpy(&dev->descriptor, it.val, it.len);
-                  iter_next(&it);
-               }
+               memcpy(&dev->descriptor, it.val, it.len);
+               iter_next(&it);
+
+               /// \todo Device limited to 1 transferred configuration.
+               dev->descriptor.bNumConfigurations = 1;
 
                // Read config
                if(it.type == RawType) {
@@ -332,8 +323,7 @@ int usb_find_devices(void)
                   struct usb_interface* iface = &dev->config->interface[i];
 
                   // Read altsettings count
-                  iface->num_altsetting = as_int(it.val, it.len);
-                  iter_next(&it);
+                  iface->num_altsetting = iter_getint(&it);
 
                   // Allocate altsettings
                   if(iface->num_altsetting > 0) {
@@ -344,22 +334,25 @@ int usb_find_devices(void)
                   for(j = 0; j < iface->num_altsetting; ++j) {
 
                      // Ensure struct under/overlap
-                     struct usb_interface_descriptor* altsetting = &iface->altsetting[j];
+                     struct usb_interface_descriptor* as = &iface->altsetting[j];
                      int szlen = sizeof(struct usb_interface_descriptor);
                      if(szlen > it.len)
                         szlen = it.len;
 
-                     memcpy(altsetting, it.val, szlen);
+                     memcpy(as, it.val, szlen);
                      iter_next(&it);
 
                      // Allocate endpoints
-                     if(altsetting->bNumEndpoints > 0) {
-                        altsetting->endpoint = malloc(altsetting->bNumEndpoints * sizeof(struct usb_endpoint_descriptor));
+                     as->endpoint = NULL;
+                     if(as->bNumEndpoints > 0) {
+                        size_t epsize = as->bNumEndpoints * sizeof(struct usb_endpoint_descriptor);
+                        as->endpoint = malloc(epsize);
+                        memset(as->endpoint, 0, epsize);
                      }
 
                      // Load endpoints
-                     for(k = 0; k < altsetting->bNumEndpoints; ++k) {
-                        struct usb_endpoint_descriptor* endpoint = &altsetting->endpoint[k];
+                     for(k = 0; k < as->bNumEndpoints; ++k) {
+                        struct usb_endpoint_descriptor* endpoint = &as->endpoint[k];
                         int szlen = sizeof(struct usb_endpoint_descriptor);
                         if(szlen > it.len)
                            szlen = it.len;
@@ -373,18 +366,15 @@ int usb_find_devices(void)
                      }
 
                      // Null extra interfaces.
-                     altsetting->extralen = 0;
-                     altsetting->extra = NULL;
+                     as->extralen = 0;
+                     as->extra = NULL;
                   }
                }
 
                // Read devnum
-               if(it.type == IntegerType) {
-                  dev->devnum = as_int(it.val, it.len);
-                  iter_next(&it);
-               }
+               dev->devnum = iter_getuint(&it);
 
-              log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
+               log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
             }
 
             // Free unused devices
@@ -446,22 +436,17 @@ usb_dev_handle *usb_open(struct usb_device *dev)
    char buf[255];
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbOpen);
-   pkt_append(&pkt, IntegerType, sizeof(dev->bus->location), &dev->bus->location);
-   pkt_append(&pkt, IntegerType, sizeof(dev->devnum),        &dev->devnum);
+   pkt_append(&pkt, UnsignedType, sizeof(dev->bus->location), &dev->bus->location);
+   pkt_append(&pkt, UnsignedType, sizeof(dev->devnum),        &dev->devnum);
    pkt_send(&pkt, fd);
 
    // Get response
    int res = -1, devfd = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbOpen) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbOpen) {
       Iterator it;
       pkt_begin(&pkt, &it);
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-         iter_next(&it);
-      }
-      if(it.type == IntegerType) {
-          devfd = as_int(it.val, it.len);
-      }
+      res = iter_getint(&it);
+      devfd = iter_getint(&it);
    }
 
    // Evaluate
@@ -497,12 +482,10 @@ int usb_close(usb_dev_handle *dev)
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbClose) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbClose) {
       Iterator it;
       pkt_begin(&pkt, &it);
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-      }
+      res = iter_getint(&it);
    }
 
    call_release();
@@ -526,20 +509,15 @@ int usb_set_configuration(usb_dev_handle *dev, int configuration)
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbSetConfiguration) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbSetConfiguration) {
       Iterator it;
       pkt_begin(&pkt, &it);
 
       // Read result
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-         iter_next(&it);
-      }
+      res = iter_getint(&it);
 
       // Read callback configuration
-      if(it.type == IntegerType) {
-         configuration = as_int(it.val, it.len);
-      }
+      configuration = iter_getint(&it);
    }
 
    // Save configuration
@@ -567,20 +545,15 @@ int usb_set_altinterface(usb_dev_handle *dev, int alternate)
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbSetAltInterface) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbSetAltInterface) {
       Iterator it;
       pkt_begin(&pkt, &it);
 
       // Read result
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-         iter_next(&it);
-      }
+      res = iter_getint(&it);
 
       // Read callback configuration
-      if(it.type == IntegerType) {
-         alternate = as_int(it.val, it.len);
-      }
+      alternate = iter_getint(&it);
    }
 
    // Save configuration
@@ -603,19 +576,17 @@ int usb_resetep(usb_dev_handle *dev, unsigned int ep)
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbResetEp);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(&pkt, IntegerType, sizeof(int), &ep);
+   pkt_append(&pkt, UnsignedType, sizeof(ep), &ep);
    pkt_send(&pkt, fd);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbResetEp) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbResetEp) {
       Iterator it;
       pkt_begin(&pkt, &it);
 
       // Read result
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-      }
+      res = iter_getint(&it);
    }
 
    // Return response
@@ -635,19 +606,17 @@ int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
    Packet pkt = pkt_create(buf, 255);
    pkt_init(&pkt, UsbClearHalt);
    pkt_append(&pkt, IntegerType, sizeof(dev->fd), &dev->fd);
-   pkt_append(&pkt, IntegerType, sizeof(int), &ep);
+   pkt_append(&pkt, UnsignedType, sizeof(ep), &ep);
    pkt_send(&pkt, fd);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbClearHalt) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbClearHalt) {
       Iterator it;
       pkt_begin(&pkt, &it);
 
       // Read result
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-      }
+      res = iter_getint(&it);
    }
 
    // Return response
@@ -671,14 +640,12 @@ int usb_reset(usb_dev_handle *dev)
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbReset) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbReset) {
       Iterator it;
       pkt_begin(&pkt, &it);
 
       // Read result
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-      }
+      res = iter_getint(&it);
    }
 
    // Return response
@@ -703,12 +670,10 @@ int usb_claim_interface(usb_dev_handle *dev, int interface)
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbClaimInterface) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbClaimInterface) {
       Iterator it;
       pkt_begin(&pkt, &it);
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-      }
+      res = iter_getint(&it);
    }
 
    call_release();
@@ -732,12 +697,10 @@ int usb_release_interface(usb_dev_handle *dev, int interface)
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbReleaseInterface) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbReleaseInterface) {
       Iterator it;
       pkt_begin(&pkt, &it);
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-      }
+      res = iter_getint(&it);
    }
 
    call_release();
@@ -769,19 +732,16 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbControlMsg) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbControlMsg) {
       Iterator it;
       pkt_begin(pkt, &it);
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-         iter_next(&it);
+      res = iter_getint(&it);
+
+      if(res > 0) {
+         int minlen = (res > size) ? size : res;
+         memcpy(bytes, it.val, minlen);
       }
-      if(it.type == OctetType) {
-         if(res > 0) {
-            int minlen = (res > size) ? size : res;
-            memcpy(bytes, it.val, minlen);
-         }
-      }
+
    }
 
    // Return response
@@ -811,21 +771,17 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
 
    // Get response
    int res = -1;
-   unsigned char op = 0x00;
-   if(pkt_recv(fd, pkt) > 0) {
-      op = pkt->buf[0];
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbBulkRead) {
+
       Iterator it;
       pkt_begin(pkt, &it);
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-         iter_next(&it);
+      res = iter_getint(&it);
+
+      if(res > 0) {
+         int minlen = (res > size) ? size : res;
+         memcpy(bytes, it.val, minlen);
       }
-      if(it.type == OctetType) {
-         if(res > 0) {
-            int minlen = (res > size) ? size : res;
-            memcpy(bytes, it.val, minlen);
-         }
-      }
+
    }
 
    // Return response
@@ -851,13 +807,10 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int t
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbBulkWrite) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbBulkWrite) {
       Iterator it;
       pkt_begin(pkt, &it);
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-         iter_next(&it);
-      }
+      res = iter_getint(&it);
    }
 
    // Return response
@@ -886,13 +839,10 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, 
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbInterruptWrite) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbInterruptWrite) {
       Iterator it;
       pkt_begin(pkt, &it);
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-         iter_next(&it);
-      }
+      res = iter_getint(&it);
    }
 
    // Return response
@@ -919,20 +869,17 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
    // Get response
    int res = -1;
    unsigned char op = 0x00;
-   if(pkt_recv(fd, pkt) > 0 && pkt->buf[0] == UsbInterruptRead) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbInterruptRead) {
       op = pkt->buf[0];
       Iterator it;
       pkt_begin(pkt, &it);
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-         iter_next(&it);
+      res = iter_getint(&it);
+
+      if(res > 0) {
+         int minlen = (res > size) ? size : res;
+         memcpy(bytes, it.val, minlen);
       }
-      if(it.type == OctetType) {
-         if(res > 0) {
-            int minlen = (res > size) ? size : res;
-            memcpy(bytes, it.val, minlen);
-         }
-      }
+
    }
 
    // Return response
@@ -962,12 +909,10 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt.buf[0] == UsbDetachKernelDriver) {
+   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbDetachKernelDriver) {
       Iterator it;
       pkt_begin(&pkt, &it);
-      if(it.type == IntegerType) {
-         res = as_int(it.val, it.len);
-      }
+      res = iter_getint(&it);
    }
 
    call_release();
@@ -976,7 +921,8 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 
 }
 
-/* Imported from libusb-0.1.12 for forward compatibility with libusb-1.0.
+/** \private
+ * Imported from libusb-0.1.12 for forward compatibility with libusb-1.0.
  * This overrides libusb-0.1 as well as libusb-1.0 calls.
  * @see libusb-0.1.12/usb.c:219
  * @see libusb-0.1.12/usb.c:230
@@ -984,7 +930,7 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 int usb_get_string(usb_dev_handle *dev, int index, int langid, char *buf,
         size_t buflen)
 {
-  /*
+  /** \private
    * We can't use usb_get_descriptor() because it's lacking the index
    * parameter. This will be fixed in libusb 1.0
    */
@@ -1037,6 +983,9 @@ int usb_get_string_simple(usb_dev_handle *dev, int index, char *buf, size_t bufl
   return di;
 }
 
+/** \private
+  *  Imported from libusb-0.1.12 private interface as helper function.
+  */
 static void usb_destroy_configuration(struct usb_device *dev)
 {
   int c, i, j, k;

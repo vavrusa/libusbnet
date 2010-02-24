@@ -97,7 +97,7 @@ void UsbService::usb_find_busses(int fd, Packet& in)
 
    // Send result
    Packet pkt(UsbFindBusses);
-   pkt.addUInt32(res);
+   pkt.addInt32(res);
    pkt.send(fd);
 }
 
@@ -110,7 +110,7 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 
    // Prepare result packet
    Packet pkt(UsbFindDevices);
-   pkt.addUInt32(res);
+   pkt.addInt32(res);
 
    // Add existing busses and devices
    struct usb_bus* bus = 0;
@@ -171,9 +171,9 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 void UsbService::usb_open(int fd, Packet& in)
 {
    Iterator sym(in);
-   int busid = sym.asInt();
+   u_int32_t busid = sym.asUInt();
    sym.next();
-   int devid = sym.asInt();
+   u_int8_t devid = sym.asUInt();
 
    // Find device
    struct usb_device* rdev = NULL;
@@ -302,7 +302,7 @@ void UsbService::usb_resetep(int fd, Packet &in)
 {
    Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
-   int ep = sym.asInt();
+   unsigned int ep = sym.asUInt();
 
    // Find open device
    int res = -1;
@@ -327,7 +327,7 @@ void UsbService::usb_clear_halt(int fd, Packet &in)
 {
    Iterator sym(in);
    int devfd = sym.asInt(); sym.next();
-   int ep = sym.asInt();
+   unsigned int ep = sym.asUInt();
 
    // Find open device
    int res = -1;
