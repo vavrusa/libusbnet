@@ -41,7 +41,7 @@
     <h3>How to parse packet</h3>
     \code
       Iterator it(pkt); // Create iterator from packet reference.
-      printf("int(4B): %d\n", it.asInt()); // Interpret item as integer.
+      printf("int(4B): %d\n", it.getInt()); // Interpret item as integer.
     \endcode
     <h3>How to write packet</h3>
     \code
@@ -198,58 +198,66 @@ class Iterator
 
       /** Return value as unsigned integer, depending on length.
         */
-      unsigned asUInt()   {
+      unsigned getUInt()   {
          switch(mLength) {
-            case 1: return asUInt8(); break;
-            case 2: return asUInt16(); break;
-            case 4: default: return asUInt32(); break;
+            case sizeof(uint8_t): return getUInt8(); break;
+            case sizeof(uint16_t): return getUInt16(); break;
+            case sizeof(uint32_t): default: return getUInt32(); break;
          }
          return 0;
       }
 
       /** Return value as integer, depending on length.
         */
-      int asInt()   {
+      int getInt()   {
          switch(mLength) {
-            case 1: return asInt8(); break;
-            case 2: return asInt16(); break;
-            case 4: default: return asInt32(); break;
+         case sizeof(int8_t): return getInt8(); break;
+         case sizeof(int16_t): return getInt16(); break;
+         case sizeof(int32_t): default: return getInt32(); break;
          }
          return 0;
       }
 
       /** Return value as 8bit unsigned int.
         */
-      uint8_t  asUInt8() { return (uint8_t) mValue[0]; }
+      uint8_t  getUInt8() { return *((uint8_t*) getVal()); }
 
       /** Return value as 16bit unsigned int.
         */
-      uint16_t asUInt16() { return ntohs(*((uint16_t*) mValue)); }
+      uint16_t getUInt16() { return ntohs(*((uint16_t*) getVal())); }
 
       /** Return value as 32bit unsigned int.
         */
-      uint32_t asUInt32() { return ntohl(*((uint32_t*) mValue)); }
+      uint32_t getUInt32() { return ntohl(*((uint32_t*) getVal())); }
 
       /** Return value as 8bit int.
         */
-      int8_t  asInt8() { return (int8_t) mValue[0]; }
+      int8_t  getInt8() { return *((int8_t*) getVal()); }
 
       /** Return value as 16bit int.
         */
-      int16_t asInt16() { return ntohs(*((int16_t*) mValue)); }
+      int16_t getInt16() { return ntohs(*((int16_t*) getVal())); }
 
       /** Return value as 32bit int.
         */
-      int32_t asInt32() { return ntohl(*((int32_t*) mValue)); }
+      int32_t getInt32() { return ntohl(*((int32_t*) getVal())); }
 
-      /** Return value as string.
+      /** Return value as byte array.
         */
-      const char* asString() { return mValue; }
+      const char* getByteArray() { return getVal(); }
 
    protected:
       uint8_t setType(uint8_t val) { return mType = val; }
       uint32_t setLength(uint32_t val) { return mLength = val; }
       void setValue(const char* val) { mValue = val; }
+
+      /** Return current value and move to next.
+        */
+      const char* getVal() {
+        const char* ret = mValue;
+        next();
+        return ret;
+      }
 
    private:
       uint8_t  mType;

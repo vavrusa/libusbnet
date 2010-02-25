@@ -173,10 +173,9 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 
 void UsbService::usb_open(int fd, Packet& in)
 {
-   Iterator sym(in);
-   unsigned busid = sym.asUInt();
-   sym.next();
-   unsigned devid = sym.asUInt();
+   Iterator it(in);
+   unsigned busid = it.getUInt();
+   unsigned devid = it.getUInt();
 
    // Find device
    struct usb_device* rdev = NULL;
@@ -224,8 +223,8 @@ void UsbService::usb_open(int fd, Packet& in)
 
 void UsbService::usb_close(int fd, Packet& in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt();
+   Iterator it(in);
+   int devfd = it.getInt();
 
    // Find open device
    int res = -1;
@@ -249,9 +248,9 @@ void UsbService::usb_close(int fd, Packet& in)
 
 void UsbService::usb_set_configuration(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
-   int configuration = sym.asInt();
+   Iterator it(in);
+   int devfd = it.getInt();
+   int configuration = it.getInt();
 
    // Find open device
    int res = -1;
@@ -276,9 +275,9 @@ void UsbService::usb_set_configuration(int fd, Packet &in)
 
 void UsbService::usb_set_altinterface(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
-   int alternate = sym.asInt();
+   Iterator it(in);
+   int devfd = it.getInt();
+   int alternate = it.getInt();
 
    // Find open device
    int res = -1;
@@ -303,9 +302,9 @@ void UsbService::usb_set_altinterface(int fd, Packet &in)
 
 void UsbService::usb_resetep(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
-   unsigned int ep = sym.asUInt();
+   Iterator it(in);
+   int devfd = it.getInt();
+   unsigned int ep = it.getUInt();
 
    // Find open device
    int res = -1;
@@ -328,9 +327,9 @@ void UsbService::usb_resetep(int fd, Packet &in)
 
 void UsbService::usb_clear_halt(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
-   unsigned int ep = sym.asUInt();
+   Iterator it(in);
+   int devfd = it.getInt();
+   unsigned int ep = it.getUInt();
 
    // Find open device
    int res = -1;
@@ -353,8 +352,8 @@ void UsbService::usb_clear_halt(int fd, Packet &in)
 
 void UsbService::usb_reset(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt();
+   Iterator it(in);
+   int devfd = it.getInt();
 
    // Find open device
    int res = -1;
@@ -377,9 +376,9 @@ void UsbService::usb_reset(int fd, Packet &in)
 
 void UsbService::usb_claim_interface(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
-   int index = sym.asInt();
+   Iterator it(in);
+   int devfd = it.getInt();
+   int index = it.getInt();
    int res = -1;
 
    // Find open device
@@ -403,9 +402,9 @@ void UsbService::usb_claim_interface(int fd, Packet &in)
 
 void UsbService::usb_release_interface(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
-   int index = sym.asInt();
+   Iterator it(in);
+   int devfd = it.getInt();
+   int index = it.getInt();
    int res = -1;
 
    // Find open device
@@ -429,9 +428,9 @@ void UsbService::usb_release_interface(int fd, Packet &in)
 
 void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
-   int index = sym.asInt();
+   Iterator it(in);
+   int devfd = it.getInt();
+   int index = it.getInt();
 
    // Find open device
    int res = -1;
@@ -458,8 +457,8 @@ void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
 
 void UsbService::usb_control_msg(int fd, Packet& in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
+   Iterator it(in);
+   int devfd = it.getInt();
 
    // Find open device
    usb_dev_handle* h = NULL;
@@ -477,13 +476,13 @@ void UsbService::usb_control_msg(int fd, Packet& in)
    if(h != NULL) {
 
       // Call function
-      int reqtype = sym.asInt(); sym.next();
-      int request = sym.asInt(); sym.next();
-      int value   = sym.asInt(); sym.next();
-      int index   = sym.asInt(); sym.next();
-      int size    = sym.length();
-      data  = (char*) sym.asString(); sym.next();
-      int timeout = sym.asInt();
+      int reqtype = it.getInt();
+      int request = it.getInt();
+      int value   = it.getInt();
+      int index   = it.getInt();
+      int size    = it.length();
+      data  = (char*) it.getByteArray();
+      int timeout = it.getInt();
 
       res = ::usb_control_msg(h, reqtype, request, value, index, data, size, timeout);
       debug_msg("fd %d = %d", devfd, res);
@@ -498,8 +497,8 @@ void UsbService::usb_control_msg(int fd, Packet& in)
 
 void UsbService::usb_bulk_read(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
+   Iterator it(in);
+   int devfd = it.getInt();
 
    // Find open device
    usb_dev_handle* h = NULL;
@@ -514,9 +513,9 @@ void UsbService::usb_bulk_read(int fd, Packet &in)
    // Device not found
    int res = -1;
    char* data = NULL;
-   int ep = sym.asInt(); sym.next();
-   int size = sym.asInt(); sym.next();
-   int timeout = sym.asInt();
+   int ep = it.getInt();
+   int size = it.getInt();
+   int timeout = it.getInt();
    if(h != NULL && size > 0) {
 
       // Call function
@@ -538,8 +537,8 @@ void UsbService::usb_bulk_read(int fd, Packet &in)
 
 void UsbService::usb_bulk_write(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
+   Iterator it(in);
+   int devfd = it.getInt();
 
    // Find open device
    usb_dev_handle* h = NULL;
@@ -553,10 +552,10 @@ void UsbService::usb_bulk_write(int fd, Packet &in)
 
    // Device not found
    int res = -1;
-   int ep = sym.asInt(); sym.next();
-   char* data = (char*) sym.asString();
-   int size = sym.length(); sym.next();
-   int timeout = sym.asInt();
+   int ep = it.getInt();
+   int size = it.length();
+   char* data = (char*) it.getByteArray();
+   int timeout = it.getInt();
    if(h != NULL && size > 0) {
 
       // Call function
@@ -572,8 +571,8 @@ void UsbService::usb_bulk_write(int fd, Packet &in)
 
 void UsbService::usb_interrupt_write(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
+   Iterator it(in);
+   int devfd = it.getInt();
 
    // Find open device
    usb_dev_handle* h = NULL;
@@ -587,10 +586,10 @@ void UsbService::usb_interrupt_write(int fd, Packet &in)
 
    // Device not found
    int res = -1;
-   int ep = sym.asInt(); sym.next();
-   char* data = (char*) sym.asString();
-   int size = sym.length(); sym.next();
-   int timeout = sym.asInt();
+   int ep = it.getInt();
+   int size = it.length();
+   char* data = (char*) it.getByteArray();
+   int timeout = it.getInt();
    if(h != NULL && size > 0) {
 
       // Call function
@@ -606,8 +605,8 @@ void UsbService::usb_interrupt_write(int fd, Packet &in)
 
 void UsbService::usb_interrupt_read(int fd, Packet &in)
 {
-   Iterator sym(in);
-   int devfd = sym.asInt(); sym.next();
+   Iterator it(in);
+   int devfd = it.getInt();
 
    // Find open device
    usb_dev_handle* h = NULL;
@@ -622,9 +621,9 @@ void UsbService::usb_interrupt_read(int fd, Packet &in)
    // Device not found
    int res = -1;
    char* data = NULL;
-   int ep = sym.asInt(); sym.next();
-   int size = sym.asInt(); sym.next();
-   int timeout = sym.asInt();
+   int ep = it.getInt();
+   int size = it.getInt();
+   int timeout = it.getInt();
    if(h != NULL && size > 0) {
 
       // Call function
