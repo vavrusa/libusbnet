@@ -26,6 +26,7 @@
 #ifndef __protobase_h__
 #define __protobase_h__
 #include <stdint.h>
+#include <netinet/in.h>
 #include "common.h"
 
 /** ASN.1 semantic types.

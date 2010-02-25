@@ -115,9 +115,6 @@ int pkt_send(Packet* pkt, int fd)
    return send(fd, pkt->buf, pkt->size, 0);
 }
 
-/** \bug pkt_append does not convert byte-order of copied value, update pkt_addxyz family ..."
-  */
-#warning "pkt_append does not convert byte-order of copied value"
 int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val)
 {
    char* dst = pkt->buf + pkt->size;
@@ -139,6 +136,27 @@ int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val)
    nsize = htonl(nsize);
    memcpy(pkt->buf + 2, &nsize, sizeof(uint32_t));
    return written;
+}
+
+int pkt_addnumeric(Packet* pkt, uint8_t type, uint16_t len, int32_t val)
+{
+   // Cast to ensure correct data
+   // Unsigned type is used just as byte-buffer
+   uint8_t val8 = val;
+   uint16_t val16 = htons((uint16_t) val);
+   val = htonl(val);
+
+   // Append as byte-array
+   switch(len) {
+   case sizeof(uint8_t):  pkt_append(pkt, type, len, (const void*) &val8); break;
+   case sizeof(uint16_t): pkt_append(pkt, type, len, (const void*) &val16); break;
+   case sizeof(uint32_t): pkt_append(pkt, type, len, (const void*) &val); break;
+   default:
+      return 0;
+      break;
+   }
+
+   return len;
 }
 
 void* pkt_begin(Packet* pkt, Iterator* it)

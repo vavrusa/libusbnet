@@ -25,7 +25,6 @@
 #pragma once
 #ifndef __protocol_h__
 #define __protocol_h__
-#include <stdint.h>
 #include "protobase.h"
 
 /** \page proto_page
@@ -104,6 +103,7 @@ void pkt_free(Packet* pkt);
 void pkt_init(Packet* pkt, uint8_t op);
 
 /** Append parameter to packet.
+  * \warning No byte-order conversion applied, raw data copy only.
   * \param pkt packet
   * \param type parameter type
   * \param len  parameter size
@@ -112,11 +112,20 @@ void pkt_init(Packet* pkt, uint8_t op);
   */
 int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val);
 
-/** Append integer. */
-#define pkt_addint(pkt,len,val) pkt_append((pkt), IntegerType, (len), (val))
+/** Append numeric value. */
+int pkt_addnumeric(Packet* pkt, uint8_t type, uint16_t len, int32_t val);
 
-/** Append unsigned. */
-#define pkt_adduint(pkt,len,val) pkt_append((pkt), UnsignedType, (len), (val))
+/* Unsigned encoding - 8,16,32 bits */
+#define pkt_adduint(pkt, val)   pkt_addnumeric((pkt), UnsignedType, sizeof(val), (val))
+#define pkt_adduint8(pkt, val)  pkt_addnumeric((pkt), UnsignedType, sizeof(uint8_t),  (val))
+#define pkt_adduint16(pkt, val) pkt_addnumeric((pkt), UnsignedType, sizeof(uint16_t), (val))
+#define pkt_adduint32(pkt, val) pkt_addnumeric((pkt), UnsignedType, sizeof(uint32_t), (val))
+
+/* Integer encoding - 8,16,32 bits */
+#define pkt_addint(pkt, val)   pkt_addnumeric((pkt), IntegerType, sizeof(val), (val))
+#define pkt_addint8(pkt, val)  pkt_addnumeric((pkt), IntegerType, sizeof(int8_t),  (val))
+#define pkt_addint16(pkt, val) pkt_addnumeric((pkt), IntegerType, sizeof(int16_t), (val))
+#define pkt_addint32(pkt, val) pkt_addnumeric((pkt), IntegerType, sizeof(int32_t), (val))
 
 /** Append string. */
 #define pkt_addstr(pkt,len,val) pkt_append((pkt), OctetType, (len), (val))

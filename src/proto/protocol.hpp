@@ -185,9 +185,7 @@ class Iterator
       uint32_t length() { return mLength; }
 
       /** Return value as unsigned integer, depending on length.
-        * \bug Iterator::asUInt()/asInt() does not convert byte-order of copied value."
         */
-      #warning "Iterator::asUInt()/asInt() does not convert byte-order of copied value."
       unsigned asUInt()   {
          switch(mLength) {
             case 1: return asUInt8(); break;
@@ -214,11 +212,11 @@ class Iterator
 
       /** Return value as 16bit unsigned int.
         */
-      uint16_t asUInt16() { return *((uint16_t*) mValue); }
+      uint16_t asUInt16() { return ntohs(*((uint16_t*) mValue)); }
 
       /** Return value as 32bit unsigned int.
         */
-      uint32_t asUInt32() { return *((uint32_t*) mValue); }
+      uint32_t asUInt32() { return ntohl(*((uint32_t*) mValue)); }
 
       /** Return value as 8bit int.
         */
@@ -226,11 +224,11 @@ class Iterator
 
       /** Return value as 16bit int.
         */
-      int16_t asInt16() { return *((int16_t*) mValue); }
+      int16_t asInt16() { return ntohs(*((int16_t*) mValue)); }
 
       /** Return value as 32bit int.
         */
-      int32_t asInt32() { return *((int32_t*) mValue); }
+      int32_t asInt32() { return ntohl(*((int32_t*) mValue)); }
 
       /** Return value as string.
         */
