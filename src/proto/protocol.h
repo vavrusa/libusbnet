@@ -39,15 +39,15 @@
     <h3>How to parse packet</h3>
     \code
        pkt_begin(&pkt, &it); // Read packet size and enter
-       if(it.type == IntegerType)
-         printf("int(4B): %d\n", as_int(it.val, it.len));
+       printf("int(4B): %d\n", iter_getint(&it)); // Return value as integer, move to next
     \endcode
     <h3>How to write packet</h3>
     \code
        char buf[PACKET_MINSIZE]; // Buffering on stack
        Packet pkt = pkt_create(buf, PACKET_MINSIZE); // Static initialization
        pkt_init(&pkt, UsbInit);  // Write packet header and opcode
-       pkt_append(&pkt, IntegerType, sizeof(int), &someval); // Append integer
+       pkt_addint8(&pkt, 0x4F);  // Append 8bit integer
+       pkt_adduint(&pkt, someval); // Append variable-length unsigned
        pkt_send(&pkt, fd);       // Send packet
     \endcode
   */
@@ -115,16 +115,28 @@ int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val);
 /** Append numeric value. */
 int pkt_addnumeric(Packet* pkt, uint8_t type, uint16_t len, int32_t val);
 
-/* Unsigned encoding - 8,16,32 bits */
+/** Add variable-length unsigned integer. */
 #define pkt_adduint(pkt, val)   pkt_addnumeric((pkt), UnsignedType, sizeof(val), (val))
+
+/** Add 8bit unsigned integer. */
 #define pkt_adduint8(pkt, val)  pkt_addnumeric((pkt), UnsignedType, sizeof(uint8_t),  (val))
+
+/** Add 16bit unsigned integer. */
 #define pkt_adduint16(pkt, val) pkt_addnumeric((pkt), UnsignedType, sizeof(uint16_t), (val))
+
+/** Add 32bit unsigned integer. */
 #define pkt_adduint32(pkt, val) pkt_addnumeric((pkt), UnsignedType, sizeof(uint32_t), (val))
 
-/* Integer encoding - 8,16,32 bits */
+/** Add variable-length signed integer. */
 #define pkt_addint(pkt, val)   pkt_addnumeric((pkt), IntegerType, sizeof(val), (val))
+
+/** Add 8bit signed integer. */
 #define pkt_addint8(pkt, val)  pkt_addnumeric((pkt), IntegerType, sizeof(int8_t),  (val))
+
+/** Add 16bit signed integer. */
 #define pkt_addint16(pkt, val) pkt_addnumeric((pkt), IntegerType, sizeof(int16_t), (val))
+
+/** Add 32bit signed integer. */
 #define pkt_addint32(pkt, val) pkt_addnumeric((pkt), IntegerType, sizeof(int32_t), (val))
 
 /** Append string. */

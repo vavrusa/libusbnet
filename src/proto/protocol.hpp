@@ -110,7 +110,9 @@ class Struct
       return block;
    }
 
-   /** Add encoded numeric value. */
+   /** Add encoded numeric value.
+     * Converts integer byte-order.
+     */
    Struct& addNumeric(uint8_t type, uint8_t len, uint32_t val = 0);
 
    /** Add octet string. */
@@ -124,22 +126,32 @@ class Struct
    /** Add raw data. */
    Struct& addData(const char* data, size_t size, uint8_t type = RawType);
 
-   /* Integer encoding - 8,16,32 bits */
+   /** Append 8bit long unsigned integer. */
    Struct& addUInt8(uint8_t val) {
       return addNumeric(UnsignedType, 1, val);
    }
+
+   /** Append 16bit long unsigned integer. */
    Struct& addUInt16(uint16_t val) {
       return addNumeric(UnsignedType, 2, val);
    }
+
+   /** Append 32bit long unsigned integer. */
    Struct& addUInt32(uint32_t val) {
       return addNumeric(UnsignedType, 4, val);
    }
+
+   /** Append 8bit long signed integer. */
    Struct& addInt8(int8_t val) {
       return addNumeric(IntegerType, 1, val);
    }
+
+   /** Append 16bit long signed integer. */
    Struct& addInt16(int16_t val) {
       return addNumeric(IntegerType, 2, val);
    }
+
+   /** Append 32bit long signed integer. */
    Struct& addInt32(int32_t val) {
       return addNumeric(IntegerType, 4, val);
    }

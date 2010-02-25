@@ -1,4 +1,6 @@
-*   - Created Doxygen API documentation.
+*   - Byte-order conversion
+    - Created examples in documentation
+    - Created Doxygen API documentation.
     - Code refactoring.
     - Namespaces in C++ API.
 
