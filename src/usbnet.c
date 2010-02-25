@@ -289,10 +289,13 @@ int usb_find_devices(void)
                // Read devnum
                dev->devnum = iter_getuint(&it);
 
-               /** Read descriptor
-                 * \todo Byte-order for int16/32 members in this and other octet transfers.
-                 */
+               // Read descriptor
+               // Apply byte-order conversion for 16/32bit integers
                memcpy(&dev->descriptor, it.val, it.len);
+               dev->descriptor.bcdUSB = ntohs(dev->descriptor.bcdUSB);
+               dev->descriptor.idVendor = ntohs(dev->descriptor.idVendor);
+               dev->descriptor.idProduct = ntohs(dev->descriptor.idProduct);
+               dev->descriptor.bcdDevice = ntohs(dev->descriptor.bcdDevice);
                iter_next(&it);
 
                // Alloc configurations
@@ -313,7 +316,9 @@ int usb_find_devices(void)
                   if(szlen > it.len)
                      szlen = it.len;
 
+                  // Read config and apply byte-order conversion
                   memcpy(cfg, it.val, szlen);
+                  cfg->wTotalLength = ntohs(cfg->wTotalLength);
 
                   // Allocate interfaces
                   cfg->interface = NULL;
@@ -321,7 +326,7 @@ int usb_find_devices(void)
                      cfg->interface = malloc(cfg->bNumInterfaces * sizeof(struct usb_interface));
                   }
 
-                  //! \todo Implement usb_device extra interfaces - are they needed?
+                  //! \test Implement usb_device extra interfaces - are they needed?
                   cfg->extralen = 0;
                   cfg->extra = NULL;
                   iter_next(&it);
@@ -348,6 +353,7 @@ int usb_find_devices(void)
                         if(szlen > it.len)
                            szlen = it.len;
 
+                        // Read altsettings - no conversions apply
                         memcpy(as, it.val, szlen);
                         iter_next(&it);
 
@@ -366,7 +372,9 @@ int usb_find_devices(void)
                            if(szlen > it.len)
                               szlen = it.len;
 
+                           // Read endpoint and apply conversion
                            memcpy(endpoint, it.val, szlen);
+                           endpoint->wMaxPacketSize = ntohs(endpoint->wMaxPacketSize);
                            iter_next(&it);
 
                            // Null extra descriptors.

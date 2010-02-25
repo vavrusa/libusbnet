@@ -68,7 +68,6 @@ typedef struct {
 } Iterator;
 
 /** Packet manipulation interface.
- *  \todo Automatic packet size allocation.
  *  \todo Fixed size packets boundaries checking.
  */
 

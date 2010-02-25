@@ -1,4 +1,4 @@
-*   - Byte-order conversion
+0.5 - Byte-order conversion
     - Created examples in documentation
     - Created Doxygen API documentation.
     - Code refactoring.

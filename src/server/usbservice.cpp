@@ -116,12 +116,6 @@ void UsbService::usb_find_devices(int fd, Packet& in)
    struct usb_bus* bus = 0;
    for(bus = ::usb_get_busses(); bus; bus = bus->next) {
 
-      /* char dirname[PATH_MAX + 1];
-         struct usb_device *devices;
-         u_int32_t location;
-         struct usb_device *root_dev;
-       */
-
       Struct block = pkt.writeBlock(StructureType);
       block.addString(bus->dirname);
       block.addUInt32(bus->location);
@@ -130,16 +124,28 @@ void UsbService::usb_find_devices(int fd, Packet& in)
       for(struct usb_device* dev = bus->devices; dev; dev = dev->next) {
 
          Struct devBlock = block.writeBlock(SequenceType);
-
-         //! \todo Fix raw structures byte order in integer members.
          devBlock.addString(dev->filename);
          devBlock.addUInt8(dev->devnum);
-         devBlock.addData((const char*) &(dev->descriptor), sizeof(struct usb_device_descriptor));
+
+         // Copy device descriptor
+         // Convert byte-order for 16/32bit values
+         struct usb_device_descriptor desc_m;
+         memcpy(&desc_m, &dev->descriptor, sizeof(struct usb_device_descriptor));
+         desc_m.bcdUSB = htons(desc_m.bcdUSB);
+         desc_m.idVendor = htons(desc_m.idVendor);
+         desc_m.idProduct = htons(desc_m.idProduct);
+         desc_m.bcdDevice = htons(desc_m.bcdDevice);
+         devBlock.addData((const char*) &desc_m, sizeof(struct usb_device_descriptor));
 
          // Add configurations
          for(unsigned c = 0; c < dev->descriptor.bNumConfigurations; ++c) {
             struct usb_config_descriptor* cfg = &dev->config[c];
-            devBlock.addData((const char*) cfg, sizeof(struct usb_config_descriptor));
+
+            // Copy config descriptor
+            struct usb_config_descriptor cfg_m;
+            memcpy(&cfg_m, cfg, sizeof(struct usb_config_descriptor));
+            cfg_m.wTotalLength = htons(cfg_m.wTotalLength);
+            devBlock.addData((const char*) &cfg_m, sizeof(struct usb_config_descriptor));
 
             // Add interfaces
             for(unsigned i = 0; i < cfg->bNumInterfaces; ++i) {
@@ -149,12 +155,19 @@ void UsbService::usb_find_devices(int fd, Packet& in)
                // Add interface settings
                for(unsigned j = 0; j < iface->num_altsetting; ++j) {
                   struct usb_interface_descriptor* altsetting = &iface->altsetting[j];
+
+                  // Copy altsetting - no conversions apply
                   devBlock.addData((const char*) altsetting, sizeof(struct usb_interface_descriptor));
 
                   // Add endpoints
                   for(unsigned k = 0; k < altsetting->bNumEndpoints; ++k) {
                      struct usb_endpoint_descriptor* endpoint = &altsetting->endpoint[k];
-                     devBlock.addData((const char*) endpoint, sizeof(struct usb_endpoint_descriptor));
+
+                     // Copy endpoint
+                     struct usb_endpoint_descriptor endpoint_m;
+                     memcpy(&endpoint_m, endpoint, sizeof(struct usb_endpoint_descriptor));
+                     endpoint_m.wMaxPacketSize = htons(endpoint_m.wMaxPacketSize);
+                     devBlock.addData((const char*) &endpoint_m, sizeof(struct usb_endpoint_descriptor));
                   }
 
                   // Add extra interface descriptors
