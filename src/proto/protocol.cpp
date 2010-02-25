@@ -181,6 +181,10 @@ int Packet::recv(int fd)
          return -1;
    }
 
+   #ifdef DEBUG
+   //pkt_dump(dst->buf, dst->size);
+   #endif
+
    return size();
 }
 

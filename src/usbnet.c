@@ -381,7 +381,7 @@ int usb_find_devices(void)
                   }
                }
 
-               log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
+               //log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
             }
 
             // Free unused devices
@@ -685,7 +685,7 @@ int usb_claim_interface(usb_dev_handle *dev, int interface)
    }
 
    call_release();
-   printf("%s: returned %d\n", __func__, res);
+   debug_msg("returned %d", res);
    return res;
 }
 

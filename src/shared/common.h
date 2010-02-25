@@ -46,13 +46,9 @@ static const char* filename(const char* path) {
 
 /** Log message.
   */
-#ifdef DEBUG
 #define log_msg(fmt, args...) \
 printf(fmt, ## args); \
 printf("\n")
-#else
-#define log_msg(fmt, args...)
-#endif
 
 /** Error message.
   */
