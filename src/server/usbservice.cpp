@@ -135,28 +135,33 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 
          //! \todo Fix raw structures byte order in integer members.
          devBlock.addString(dev->filename);
+         devBlock.addUInt8(dev->devnum);
          devBlock.addData((const char*) &(dev->descriptor), sizeof(struct usb_device_descriptor));
-         devBlock.addData((const char*) dev->config, sizeof(struct usb_config_descriptor));
 
-         // Add interfaces
-         for(unsigned i = 0; i < dev->config->bNumInterfaces; ++i) {
-            struct usb_interface* iface = &dev->config->interface[i];
-            devBlock.addInt32(iface->num_altsetting);
+         // Add configurations
+         for(unsigned c = 0; c < dev->descriptor.bNumConfigurations; ++c) {
+            struct usb_config_descriptor* cfg = &dev->config[c];
+            devBlock.addData((const char*) cfg, sizeof(struct usb_config_descriptor));
 
-            // Add interface settings
-            for(unsigned j = 0; j < iface->num_altsetting; ++j) {
-               struct usb_interface_descriptor* altsetting = &iface->altsetting[j];
-               devBlock.addData((const char*) altsetting, sizeof(struct usb_interface_descriptor));
+            // Add interfaces
+            for(unsigned i = 0; i < cfg->bNumInterfaces; ++i) {
+               struct usb_interface* iface = &cfg->interface[i];
+               devBlock.addInt32(iface->num_altsetting);
 
-               // Add endpoints
-               for(unsigned k = 0; k < altsetting->bNumEndpoints; ++k) {
-                  struct usb_endpoint_descriptor* endpoint = &altsetting->endpoint[k];
-                  devBlock.addData((const char*) endpoint, sizeof(struct usb_endpoint_descriptor));
+               // Add interface settings
+               for(unsigned j = 0; j < iface->num_altsetting; ++j) {
+                  struct usb_interface_descriptor* altsetting = &iface->altsetting[j];
+                  devBlock.addData((const char*) altsetting, sizeof(struct usb_interface_descriptor));
+
+                  // Add endpoints
+                  for(unsigned k = 0; k < altsetting->bNumEndpoints; ++k) {
+                     struct usb_endpoint_descriptor* endpoint = &altsetting->endpoint[k];
+                     devBlock.addData((const char*) endpoint, sizeof(struct usb_endpoint_descriptor));
+                  }
                }
             }
          }
 
-         devBlock.addUInt8(dev->devnum);
          devBlock.finalize();
       }
 

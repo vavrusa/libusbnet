@@ -218,8 +218,8 @@ int usb_find_devices(void)
    int fd = init_hostfd();
 
    // Create buffer
-   char buf[4096];
-   Packet pkt = pkt_create(buf, 4096);
+   char buf[8192];
+   Packet pkt = pkt_create(buf, 8192);
    pkt_init(&pkt, UsbFindDevices);
    pkt_send(&pkt, fd);
 
@@ -286,93 +286,99 @@ int usb_find_devices(void)
                // Read filename
                strcpy(dev->filename, iter_getstr(&it));
 
-               // Read description
+               // Read devnum
+               dev->devnum = iter_getuint(&it);
+
+               // Read descriptor
                memcpy(&dev->descriptor, it.val, it.len);
                iter_next(&it);
 
-               /// \todo Device limited to 1 transferred configuration.
-               dev->descriptor.bNumConfigurations = 1;
+               // Alloc configurations
+               unsigned cfgid = 0, cfgnum = dev->descriptor.bNumConfigurations;
+               dev->config = NULL;
+               if(cfgnum > 0) {
+                  dev->config = malloc(cfgnum * sizeof(struct usb_config_descriptor));
+                  memset(dev->config, 0, cfgnum * sizeof(struct usb_config_descriptor));
+               }
 
                // Read config
-               if(it.type == RawType) {
+               while(it.type == RawType && cfgid < cfgnum) {
+                  struct usb_config_descriptor* cfg = &dev->config[cfgid];
+                  ++cfgid;
 
                   // Ensure struct under/overlap
                   int szlen = sizeof(struct usb_config_descriptor);
                   if(szlen > it.len)
                      szlen = it.len;
 
-                  dev->config = malloc(sizeof(struct usb_config_descriptor));
-                  memcpy(dev->config, it.val, szlen);
+                  memcpy(cfg, it.val, szlen);
 
                   // Allocate interfaces
-                  dev->config->interface = NULL;
-                  if(dev->config->bNumInterfaces > 0) {
-                     dev->config->interface = malloc(dev->config->bNumInterfaces * sizeof(struct usb_interface));
+                  cfg->interface = NULL;
+                  if(cfg->bNumInterfaces > 0) {
+                     cfg->interface = malloc(cfg->bNumInterfaces * sizeof(struct usb_interface));
                   }
 
                   //! \todo Implement usb_device extra interfaces - are they needed?
-                  dev->config->extralen = 0;
-                  dev->config->extra = NULL;
-
+                  cfg->extralen = 0;
+                  cfg->extra = NULL;
                   iter_next(&it);
-               }
 
-               // Load interfaces
-               unsigned i, j, k;
-               for(i = 0; i < dev->config->bNumInterfaces; ++i) {
-                  struct usb_interface* iface = &dev->config->interface[i];
+                  // Load interfaces
+                  unsigned i, j, k;
+                  for(i = 0; i < cfg->bNumInterfaces; ++i) {
+                     struct usb_interface* iface = &cfg->interface[i];
 
-                  // Read altsettings count
-                  iface->num_altsetting = iter_getint(&it);
+                     // Read altsettings count
+                     iface->num_altsetting = iter_getint(&it);
 
-                  // Allocate altsettings
-                  if(iface->num_altsetting > 0) {
-                     iface->altsetting = malloc(iface->num_altsetting * sizeof(struct usb_interface_descriptor));
-                  }
-
-                  // Load altsettings
-                  for(j = 0; j < iface->num_altsetting; ++j) {
-
-                     // Ensure struct under/overlap
-                     struct usb_interface_descriptor* as = &iface->altsetting[j];
-                     int szlen = sizeof(struct usb_interface_descriptor);
-                     if(szlen > it.len)
-                        szlen = it.len;
-
-                     memcpy(as, it.val, szlen);
-                     iter_next(&it);
-
-                     // Allocate endpoints
-                     as->endpoint = NULL;
-                     if(as->bNumEndpoints > 0) {
-                        size_t epsize = as->bNumEndpoints * sizeof(struct usb_endpoint_descriptor);
-                        as->endpoint = malloc(epsize);
-                        memset(as->endpoint, 0, epsize);
+                     // Allocate altsettings
+                     if(iface->num_altsetting > 0) {
+                        iface->altsetting = malloc(iface->num_altsetting * sizeof(struct usb_interface_descriptor));
                      }
 
-                     // Load endpoints
-                     for(k = 0; k < as->bNumEndpoints; ++k) {
-                        struct usb_endpoint_descriptor* endpoint = &as->endpoint[k];
-                        int szlen = sizeof(struct usb_endpoint_descriptor);
+                     // Load altsettings
+                     for(j = 0; j < iface->num_altsetting; ++j) {
+
+                        // Ensure struct under/overlap
+                        struct usb_interface_descriptor* as = &iface->altsetting[j];
+                        int szlen = sizeof(struct usb_interface_descriptor);
                         if(szlen > it.len)
                            szlen = it.len;
 
-                        memcpy(endpoint, it.val, szlen);
+                        memcpy(as, it.val, szlen);
                         iter_next(&it);
 
-                        // Null extra descriptors.
-                        endpoint->extralen = 0;
-                        endpoint->extra = NULL;
-                     }
+                        // Allocate endpoints
+                        as->endpoint = NULL;
+                        if(as->bNumEndpoints > 0) {
+                           size_t epsize = as->bNumEndpoints * sizeof(struct usb_endpoint_descriptor);
+                           as->endpoint = malloc(epsize);
+                           memset(as->endpoint, 0, epsize);
+                        }
 
-                     // Null extra interfaces.
-                     as->extralen = 0;
-                     as->extra = NULL;
+                        // Load endpoints
+                        for(k = 0; k < as->bNumEndpoints; ++k) {
+                           struct usb_endpoint_descriptor* endpoint = &as->endpoint[k];
+                           int szlen = sizeof(struct usb_endpoint_descriptor);
+                           if(szlen > it.len)
+                              szlen = it.len;
+
+                           memcpy(endpoint, it.val, szlen);
+                           iter_next(&it);
+
+                           // Null extra descriptors.
+                           endpoint->extralen = 0;
+                           endpoint->extra = NULL;
+                        }
+
+                        // Null extra interfaces.
+                        as->extralen = 0;
+                        as->extra = NULL;
+                     }
                   }
                }
 
-               // Read devnum
-               dev->devnum = iter_getuint(&it);
                //log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
             }
 
@@ -726,7 +732,7 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
    pkt_addint(pkt, sizeof(int), &request);
    pkt_addint(pkt, sizeof(int), &value);
    pkt_addint(pkt, sizeof(int), &index);
-   pkt_addraw(pkt, size,        bytes);
+   pkt_addstr(pkt, size,        bytes);
    pkt_addint(pkt, sizeof(int), &timeout);
    pkt_send(pkt, fd);
 
@@ -801,7 +807,7 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int t
    Packet* pkt = pkt_new(size + 128, UsbBulkWrite);
    pkt_addint(pkt, sizeof(dev->fd), &dev->fd);
    pkt_addint(pkt, sizeof(int), &ep);
-   pkt_addraw(pkt, size,        bytes);
+   pkt_addstr(pkt, size,        bytes);
    pkt_addint(pkt, sizeof(int), &timeout);
    pkt_send(pkt, fd);
 
@@ -833,7 +839,7 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, 
    Packet* pkt = pkt_new(size + 128, UsbInterruptWrite);
    pkt_addint(pkt, sizeof(dev->fd), &dev->fd);
    pkt_addint(pkt, sizeof(int), &ep);
-   pkt_addraw(pkt, size,        bytes);
+   pkt_addstr(pkt, size,        bytes);
    pkt_addint(pkt, sizeof(int), &timeout);
    pkt_send(pkt, fd);
 
