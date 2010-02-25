@@ -60,7 +60,12 @@ void ServerSocket::run()
       // Evaluate incoming sockets
       if(!incoming.empty()) {
          for(it = incoming.begin(); it != incoming.end(); ++it) {
-            log_msg("Server: client connected (fd %d)", it->fd);
+            if(it->fd == sock()) {
+               log_msg("Server: listening on fd %d", it->fd);
+            }
+            else {
+               log_msg("Server: client connected (socket fd %d)", it->fd);
+            }
             d->clients.push_back(*it);
          }
          incoming.clear();
@@ -68,7 +73,7 @@ void ServerSocket::run()
 
       // Poll clients
       // Contiguity for std::vector is mandated by the standard [See 23.2.4./1]
-      if(poll(&d->clients[0], d->clients.size(), 2000) > 0)
+      if(poll(&d->clients[0], d->clients.size(), 1000) > 0)
       {
          // Check server for read
          for(it = d->clients.begin(); it != d->clients.end(); ++it) {
@@ -97,7 +102,7 @@ void ServerSocket::run()
 
             // Disconnect
             if(it->revents & POLLHUP) {
-               log_msg("Server:  client disconnected (fd %d)", it->fd);
+               log_msg("Server: client disconnected (socket fd %d)", it->fd);
                d->clients.erase(it);
                it = d->clients.begin();
                continue;
@@ -120,7 +125,6 @@ bool ServerSocket::read(int fd)
    }
 
    // Handle incoming packet
-   pkt.dump();
    handle(fd, pkt);
 
    return true;

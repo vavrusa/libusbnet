@@ -73,7 +73,7 @@ bool UsbService::handle(int fd, Packet& pkt)
       case UsbInterruptWrite: usb_interrupt_write(fd, pkt); break;
       case UsbInterruptRead: usb_interrupt_read(fd, pkt); break;
       default:
-         log_msg("Call: unhandled call type: 0x%02x (fd %d)", pkt.op(), fd);
+         log_msg("%s: unhandled call type: 0x%02x (socket fd %d)", __func__, pkt.op(), fd);
          return false;
          break;
    }
@@ -84,7 +84,7 @@ bool UsbService::handle(int fd, Packet& pkt)
 void UsbService::usb_init(int fd, Packet& in)
 {
    // Call, no ACK
-   log_msg("Call: usb_init()");
+   debug_msg("called");
    ::usb_init();
 }
 
@@ -93,7 +93,7 @@ void UsbService::usb_find_busses(int fd, Packet& in)
    // Call
    // Can't guarantee correct number in case of multi-client environment
    int res = ::usb_find_busses();
-   log_msg("Call: usb_find_busses() = %d", res);
+   debug_msg("returned %d", res);
 
    // Send result
    Packet pkt(UsbFindBusses);
@@ -106,7 +106,7 @@ void UsbService::usb_find_devices(int fd, Packet& in)
    // Can't guarantee correct result in case of multi-client environment,
    // but anything >=0 should be fine.
    int res = ::usb_find_devices();
-   log_msg("Call: usb_find_devices() = %d", res);
+   debug_msg("returned %d", res);
 
    // Prepare result packet
    Packet pkt(UsbFindDevices);
@@ -129,8 +129,6 @@ void UsbService::usb_find_devices(int fd, Packet& in)
       //! \todo Implement device children ptrs.
       for(struct usb_device* dev = bus->devices; dev; dev = dev->next) {
 
-         log_msg("Bus %s Device %s: ID %04x:%04x",
-                bus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
          Struct devBlock = block.writeBlock(SequenceType);
 
          //! \todo Fix raw structures byte order in integer members.
@@ -176,9 +174,9 @@ void UsbService::usb_find_devices(int fd, Packet& in)
 void UsbService::usb_open(int fd, Packet& in)
 {
    Iterator sym(in);
-   u_int32_t busid = sym.asUInt();
+   unsigned busid = sym.asUInt();
    sym.next();
-   u_int8_t devid = sym.asUInt();
+   unsigned devid = sym.asUInt();
 
    // Find device
    struct usb_device* rdev = NULL;
@@ -215,7 +213,7 @@ void UsbService::usb_open(int fd, Packet& in)
    }
 
 
-   log_msg("Call: usb_open(%u:%u) = %d (fd %d)", busid, devid, res, openfd);
+   debug_msg("bus_id %u, dev_id %u = %d (fd %d)", busid, devid, res, openfd);
 
    // Return result
    Packet pkt(UsbOpen);
@@ -241,7 +239,7 @@ void UsbService::usb_close(int fd, Packet& in)
       }
    }
 
-   log_msg("Call: usb_close(%d) = %d", devfd, res);
+   debug_msg("fd %d = %d", devfd, res);
 
    // Return result
    Packet pkt(UsbClose);
@@ -267,7 +265,7 @@ void UsbService::usb_set_configuration(int fd, Packet &in)
       }
    }
 
-   log_msg("Call: usb_set_configuration(%d, %d) = %d", devfd, configuration, res);
+   debug_msg("fd %d, configuration %d = %d", devfd, configuration, res);
 
    // Return result
    Packet pkt(UsbSetConfiguration);
@@ -294,7 +292,7 @@ void UsbService::usb_set_altinterface(int fd, Packet &in)
       }
    }
 
-   log_msg("Call: usb_set_altinterface(%d, %d) = %d", devfd, alternate, res);
+   debug_msg("fd %d, alternate %d = %d", devfd, alternate, res);
 
    // Return result
    Packet pkt(UsbSetAltInterface);
@@ -320,7 +318,7 @@ void UsbService::usb_resetep(int fd, Packet &in)
       }
    }
 
-   log_msg("Call: usb_resetep(%d, %d) = %d", devfd, ep, res);
+   debug_msg("fd %d, ep %d = %d", devfd, ep, res);
 
    // Return result
    Packet pkt(UsbResetEp);
@@ -345,7 +343,7 @@ void UsbService::usb_clear_halt(int fd, Packet &in)
       }
    }
 
-   log_msg("Call: usb_clear_halt(%d, %d) = %d", devfd, ep, res);
+   debug_msg("fd %d, ep %d = %d", devfd, ep, res);
 
    // Return result
    Packet pkt(UsbClearHalt);
@@ -369,7 +367,7 @@ void UsbService::usb_reset(int fd, Packet &in)
       }
    }
 
-   log_msg("Call: usb_reset(%d) = %d", devfd, res);
+   debug_msg("fd %d = %d", devfd, res);
 
    // Return result
    Packet pkt(UsbReset);
@@ -395,7 +393,7 @@ void UsbService::usb_claim_interface(int fd, Packet &in)
       }
    }
 
-   log_msg("Call: usb_claim_interface(%d) = %d", devfd, res);
+   debug_msg("fd %d = %d", devfd, res);
 
    // Return result
    Packet pkt(UsbClaimInterface);
@@ -421,7 +419,7 @@ void UsbService::usb_release_interface(int fd, Packet &in)
       }
    }
 
-   log_msg("Call: usb_release_interface(%d) = %d", devfd, res);
+   debug_msg("fd %d = %d", devfd, res);
 
    // Return result
    Packet pkt(UsbReleaseInterface);
@@ -450,7 +448,7 @@ void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
       }
    }
 
-   log_msg("Call: usb_detach_kernel_driver_np(%d, %d) = %d", devfd, index, res);
+   debug_msg("fd %d, index %d = %d", devfd, index, res);
 
    // Return result
    Packet pkt(UsbDetachKernelDriver);
@@ -488,7 +486,7 @@ void UsbService::usb_control_msg(int fd, Packet& in)
       int timeout = sym.asInt();
 
       res = ::usb_control_msg(h, reqtype, request, value, index, data, size, timeout);
-      log_msg("Call: usb_control_msg(%d) = %d", devfd, res);
+      debug_msg("fd %d = %d", devfd, res);
    }
 
    // Return packet
@@ -524,7 +522,7 @@ void UsbService::usb_bulk_read(int fd, Packet &in)
       // Call function
       data = new char[size];
       res = ::usb_bulk_read(h, ep, data, size, timeout);
-      log_msg("Call: usb_bulk_read(%d) = %d", devfd, res);
+      debug_msg("fd %d = %d", devfd, res);
    }
 
    // Return packet
@@ -563,7 +561,7 @@ void UsbService::usb_bulk_write(int fd, Packet &in)
 
       // Call function
       res = ::usb_bulk_write(h, ep, data, size, timeout);
-      log_msg("Call: usb_bulk_write(%d) = %d", devfd, res);
+      debug_msg("fd %d = %d", devfd, res);
    }
 
    // Return packet
@@ -597,7 +595,7 @@ void UsbService::usb_interrupt_write(int fd, Packet &in)
 
       // Call function
       res = ::usb_interrupt_write(h, ep, data, size, timeout);
-      log_msg("Call: usb_interrupt_write(%d) = %d", devfd, res);
+      debug_msg("fd %d = %d", devfd, res);
    }
 
    // Return packet
@@ -632,7 +630,7 @@ void UsbService::usb_interrupt_read(int fd, Packet &in)
       // Call function
       data = new char[size];
       res = ::usb_interrupt_read(h, ep, data, size, timeout);
-      log_msg("Call: usb_interrupt_read(%d) = %d", devfd, res);
+      debug_msg("fd %d = %d", devfd, res);
    }
 
    // Return packet

@@ -25,8 +25,20 @@
 #include "usbservice.hpp"
 #include "cmdflags.hpp"
 #include "common.h"
-#define EXIT_FAILURE 1
-#define EXIT_SUCCESS 0
+#include <csignal>
+#include <cstdlib>
+
+// Global service handler ptr
+UsbService* sService = NULL;
+
+// SIGINT signal handler
+void interrupt_handle(int s)
+{
+   // Stop server
+   if(s == SIGINT && sService != NULL) {
+      sService->close();
+   }
+}
 
 int main(int argc, char* argv[])
 {
@@ -69,6 +81,14 @@ int main(int argc, char* argv[])
    if(service.listen(22222, host) != Socket::Ok) {
       return EXIT_FAILURE;
    }
+
+   // Register service and signal handler
+   sService = &service;
+   struct sigaction sa;
+   sa.sa_handler = interrupt_handle;
+   sigemptyset(&sa.sa_mask);
+   sa.sa_flags = 0;
+   sigaction(SIGINT, &sa, NULL);
 
    // Process client requests
    service.run();
