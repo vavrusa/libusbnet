@@ -158,6 +158,14 @@ void UsbService::usb_find_devices(int fd, Packet& in)
                      struct usb_endpoint_descriptor* endpoint = &altsetting->endpoint[k];
                      devBlock.addData((const char*) endpoint, sizeof(struct usb_endpoint_descriptor));
                   }
+
+                  // Add extra interface descriptors
+                  if(altsetting->extralen > 0){
+                     devBlock.addInt32(altsetting->extralen);
+                     devBlock.addData((const char*)altsetting->extra, altsetting->extralen);
+                  }
+                  else
+                     devBlock.addInt32(0);
                }
             }
          }
