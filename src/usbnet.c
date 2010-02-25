@@ -374,9 +374,22 @@ int usb_find_devices(void)
                            endpoint->extra = NULL;
                         }
 
-                        // Null extra interfaces.
-                        as->extralen = 0;
-                        as->extra = NULL;
+                        // Read extra interface descriptors
+                        as->extralen = as_int(it.val, it.len);
+                        iter_next(&it);
+
+                        if(as->extralen > 0){
+                            as->extra = malloc(as->extralen);
+
+                            int szlen = as->extralen;
+                            if(szlen > it.len)
+                                szlen = it.len;
+
+                            memcpy(as->extra, it.val, szlen);
+                            iter_next(&it);
+                        }
+                        else
+                            as->extra = NULL;
                      }
                   }
                }
