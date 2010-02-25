@@ -90,13 +90,14 @@ int pack_size(uint32_t val, char* dst)
 
    // 16bit value
    if(val < ((uint16_t)~0)) {
-      uint16_t vval = val;
+      uint16_t vval = htons((uint16_t) val);
       dst[0] = (0x80 + sizeof(uint16_t));
       memcpy(dst + 1, (const char*) &vval, sizeof(uint16_t));
       return sizeof(uint16_t) + 1;
    }
 
    // 32bit value
+   val = htonl(val);
    dst[0] = (0x80 + sizeof(uint32_t));
    memcpy(dst + 1, (const char*) &val, sizeof(uint32_t));
    return sizeof(uint32_t) + 1;
@@ -113,13 +114,13 @@ int unpack_size(const char* src, uint32_t* dst)
 
    // 16bit value
    if(c == 0x82) {
-      *dst = *((uint16_t*) (src + 1));
+      *dst = ntohs(*((uint16_t*) (src + 1))) & 0x0000ffff;
       return sizeof(uint16_t) + 1;
    }
 
    // 32bit value
    if(c == 0x84) {
-      *dst = *((uint32_t*) (src + 1));
+      *dst = ntohl(*((uint32_t*) (src + 1)));
       return sizeof(uint32_t) + 1;
    }
 
@@ -131,8 +132,8 @@ unsigned as_uint(void* data, uint32_t bytes)
    unsigned val = 0;
    switch(bytes) {
    case 1: val = *((uint8_t*) data); break;
-   case 2: val = *((uint16_t*) data); break;
-   case 4: val = *((uint32_t*) data); break;
+   case 2: val = ntohs(*((uint16_t*) data)); break;
+   case 4: val = ntohl(*((uint32_t*) data)); break;
    default: break;
    }
 
@@ -144,8 +145,8 @@ int as_int(void* data, uint32_t bytes)
    int val = 0;
    switch(bytes) {
    case 1: val = *((int8_t*) data); break;
-   case 2: val = *((int16_t*) data); break;
-   case 4: val = *((int32_t*) data); break;
+   case 2: val = ntohs(*((int16_t*) data)); break;
+   case 4: val = ntohl(*((int32_t*) data)); break;
    default: break;
    }
 

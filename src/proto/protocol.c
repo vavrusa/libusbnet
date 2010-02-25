@@ -108,18 +108,26 @@ uint32_t pkt_recv(int fd, Packet* dst)
 
 int pkt_send(Packet* pkt, int fd)
 {
+   #ifdef DEBUG
+   //pkt_dump(pkt->buf, pkt->size);
+   #endif
+
    return send(fd, pkt->buf, pkt->size, 0);
 }
 
+/** \bug pkt_append does not convert byte-order of copied value, update pkt_addxyz family ..."
+  */
+#warning "pkt_append does not convert byte-order of copied value"
 int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val)
 {
    char* dst = pkt->buf + pkt->size;
 
    // Write T-L-V
+   uint16_t wlen = htons(len);
    uint16_t written = 0; char prefix = 0x82;
    memcpy(dst + written, &type, sizeof(char));    written += sizeof(char);
    memcpy(dst + written, &prefix, sizeof(char));  written += sizeof(char);
-   memcpy(dst + written, &len, sizeof(uint16_t)); written += sizeof(uint16_t);
+   memcpy(dst + written, &wlen,sizeof(uint16_t)); written += sizeof(uint16_t);
    if(len > 0) {
       memcpy(dst + written, val, len);
       written += len;
@@ -128,6 +136,7 @@ int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val)
    // Update write pos and packet size
    pkt->size += written;
    uint32_t nsize = pkt->size - PACKET_MINSIZE;
+   nsize = htonl(nsize);
    memcpy(pkt->buf + 2, &nsize, sizeof(uint32_t));
    return written;
 }

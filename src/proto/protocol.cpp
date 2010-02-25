@@ -44,6 +44,7 @@ Struct::Struct(ByteBuffer& sharedbuf, int pos)
 Struct& Struct::pushPacked(uint32_t val)
 {
    // Pack number and append
+   // function takes care of byte-order converting
    char buf[6];
    int size = pack_size(val, buf);
    append(buf, size);
@@ -75,9 +76,9 @@ Struct& Struct::addNumeric(uint8_t type, uint8_t len, uint32_t val)
    pushPacked(len);
 
    // Cast to ensure correct data
-   //! \todo Apply Little/Big Endian (host to network) conversions.
    uint8_t val8 = val;
-   uint16_t val16 = val;
+   uint16_t val16 = htons((uint16_t) val);
+   val = htonl(val);
    if(len == sizeof(uint32_t)) append((const char*) &val,   sizeof(uint32_t));
    if(len == sizeof(uint16_t)) append((const char*) &val16, sizeof(uint16_t));
    if(len == sizeof(uint8_t))  append((const char*) &val8,  sizeof(uint8_t));

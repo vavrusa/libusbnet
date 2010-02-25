@@ -289,7 +289,9 @@ int usb_find_devices(void)
                // Read devnum
                dev->devnum = iter_getuint(&it);
 
-               // Read descriptor
+               /** Read descriptor
+                 * \todo Byte-order for int16/32 members in this and other octet transfers.
+                 */
                memcpy(&dev->descriptor, it.val, it.len);
                iter_next(&it);
 
@@ -379,7 +381,7 @@ int usb_find_devices(void)
                   }
                }
 
-               //log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
+               log_msg("Bus %s Device %s: ID %04x:%04x", rbus->dirname, dev->filename, dev->descriptor.idVendor, dev->descriptor.idProduct);
             }
 
             // Free unused devices

@@ -168,19 +168,26 @@ class Iterator
          enter();
       }
 
-      // Next
+      /** Next value.
+        */
       bool next();
 
-      // Enter
+      /** Enter structural value.
+        */
       bool enter();
 
-      // Return symbol type
+      /** Return symbol type.
+        */
       uint8_t type() { return mType; }
 
-      // Return symbol length
+      /** Return value length.
+        */
       uint32_t length() { return mLength; }
 
-      // Return value as unsigned integer, depending on length
+      /** Return value as unsigned integer, depending on length.
+        * \bug Iterator::asUInt()/asInt() does not convert byte-order of copied value."
+        */
+      #warning "Iterator::asUInt()/asInt() does not convert byte-order of copied value."
       unsigned asUInt()   {
          switch(mLength) {
             case 1: return asUInt8(); break;
@@ -190,7 +197,8 @@ class Iterator
          return 0;
       }
 
-      // Return value as integer, depending on length
+      /** Return value as integer, depending on length.
+        */
       int asInt()   {
          switch(mLength) {
             case 1: return asInt8(); break;
@@ -200,25 +208,32 @@ class Iterator
          return 0;
       }
 
-      // Return value as 8bit unsigned int
+      /** Return value as 8bit unsigned int.
+        */
       uint8_t  asUInt8() { return (uint8_t) mValue[0]; }
 
-      // Return value as 16bit unsigned int
+      /** Return value as 16bit unsigned int.
+        */
       uint16_t asUInt16() { return *((uint16_t*) mValue); }
 
-      // Return value as 32bit unsigned int
+      /** Return value as 32bit unsigned int.
+        */
       uint32_t asUInt32() { return *((uint32_t*) mValue); }
 
-      // Return value as 8bit int
+      /** Return value as 8bit int.
+        */
       int8_t  asInt8() { return (int8_t) mValue[0]; }
 
-      // Return value as 16bit int
+      /** Return value as 16bit int.
+        */
       int16_t asInt16() { return *((int16_t*) mValue); }
 
-      // Return value as 32bit int
+      /** Return value as 32bit int.
+        */
       int32_t asInt32() { return *((int32_t*) mValue); }
 
-      // Return value as string
+      /** Return value as string.
+        */
       const char* asString() { return mValue; }
 
    protected:
