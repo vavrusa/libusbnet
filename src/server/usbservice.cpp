@@ -395,7 +395,6 @@ void UsbService::usb_claim_interface(int fd, Packet &in)
       usb_dev_handle* h = *i;
       if(h->fd == devfd) {
          res = ::usb_claim_interface(h, index);
-         res = 0;
          break;
       }
    }
