@@ -4,6 +4,15 @@
     libusbnet is a libusb network proxy, which enables
     communication with USB over TCP/IP network.
 
+    <h2>Installation</h2>
+    Unpack source package or clone latest git. Installation requires CMake >= 2.6, GCC and libusb development headers.
+    \code
+    user@localhost# mkdir build && cd build # Create build directory
+    user@localhost# cmake ..                # Create Makefiles using CMake
+    user@localhost# make                    # Build
+    user@localhost# sudo make install       # Install
+    \endcode
+
     <h2>Project modules</h2>
 
     - \ref proto.
@@ -17,7 +26,7 @@
     john@server# usbexportd
     jack@client# usbnet -h server:22222 -l libusbnet.so "lsusb"
     \endcode
-    See "usbnet --help".
+    See <strong>usbnet --help</strong>.
     <br/>
     <table>
       <tr>
@@ -62,6 +71,9 @@
       return res;
     }
     \endcode
+    <br/>
+    Marek Vavrusa <marek@vavrusa.com><br/>
+    Zdenek Vasicek <vasicek@fit.vutbr.cz>
 */
 
 /* Modules. */
