@@ -91,6 +91,7 @@ Struct& Struct::addData(const char* data, size_t size, uint8_t type)
    push((uint8_t) type);
    pushPacked(size);
    append(data, size);
+   return *this;
 }
 
 
