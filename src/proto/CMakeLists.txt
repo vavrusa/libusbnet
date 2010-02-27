@@ -26,7 +26,7 @@ add_library(urpc_pp SHARED ${sources} ${headers})
 
 # Install
 install( TARGETS urpc urpc_pp
-         LIBRARY DESTINATION lib
+         LIBRARY DESTINATION ${LIBDIR}
          )
 
 install( FILES ${headers} ${headers_c}

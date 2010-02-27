@@ -30,6 +30,9 @@ endif(${LIBUSB_CONST_BUFFERS})
 set(DOCUMENTATION_DIR "${CMAKE_SOURCE_DIR}/doc")
 include(${CMAKE_MODULE_PATH}/Doxygen.cmake)
 
+# Set library prefixes
+SET(LIBDIR "lib${LIB_SUFFIX}")
+
 # Subdirectories
 add_subdirectory(src)
 

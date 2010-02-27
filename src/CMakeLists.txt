@@ -30,7 +30,7 @@ target_link_libraries(usbnet ${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES} urpc)
 
 # Install
 install( TARGETS usbnet
-         LIBRARY DESTINATION lib
+         LIBRARY DESTINATION ${LIBDIR}
          )
 
 install( FILES ${headers}
