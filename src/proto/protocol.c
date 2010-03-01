@@ -86,7 +86,7 @@ uint32_t pkt_recv(int fd, Packet* dst)
 
    // Assert
    if((pending + size) > dst->bufsize) {
-      err_msg("packet bufsize too small, bufsize: %u packet size: %u.", dst->bufsize, pending + size);
+      error_msg("packet bufsize too small, bufsize: %u packet size: %u.", dst->bufsize, pending + size);
       exit(1);
    }
 

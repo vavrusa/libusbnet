@@ -26,7 +26,7 @@ add_subdirectory(server)
 add_library(usbnet SHARED ${sources} ${headers})
 
 # Dependencies
-target_link_libraries(usbnet ${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES} urpc)
+target_link_libraries(usbnet ${LIBUSB_LIBRARIES} urpc)
 
 # Install
 install( TARGETS usbnet
