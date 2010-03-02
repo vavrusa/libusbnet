@@ -52,6 +52,10 @@
     \endcode
   */
 
+
+/// Default buffer increase
+#define BUF_FRAGLEN 8
+
 /** Packet structure. */
 typedef struct {
    uint32_t bufsize;
@@ -88,6 +92,13 @@ Packet* pkt_new(uint32_t size, uint8_t op);
   * \param pkt freed packet
   */
 void pkt_free(Packet* pkt);
+
+/** Reserve given size.
+  * \param pkt given packet
+  * \param size reserved buffer size
+  * \return true or false if allocation fails
+  */
+int pkt_reserve(Packet* pkt, uint32_t size);
 
 /** Initialize packet.
   * \param pkt initialized packet

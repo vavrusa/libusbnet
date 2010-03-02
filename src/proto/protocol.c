@@ -63,6 +63,19 @@ void pkt_init(Packet* pkt, uint8_t op)
    pkt->size = PACKET_MINSIZE;
 }
 
+int pkt_reserve(Packet* pkt, uint32_t size)
+{
+   debug_msg("current %u requested %d", pkt->bufsize, size);
+   if(pkt->bufsize < size) {
+      debug_msg("reallocating packet from %u -> %d", pkt->bufsize, size + BUF_FRAGLEN);
+      pkt->bufsize = size + BUF_FRAGLEN;
+      if((pkt->buf = realloc(pkt->buf, pkt->bufsize)) == NULL)
+         pkt->bufsize = 0;
+   }
+
+   return pkt->buf != NULL;
+}
+
 uint32_t pkt_size(Packet* pkt)
 {
    return pkt->size;
@@ -75,8 +88,10 @@ uint32_t pkt_recv(int fd, Packet* dst)
    dst->size = 0;
 
    // Read packet header
+   pkt_reserve(dst, PACKET_MINSIZE);
    if((size = pkt_recv_header(fd, dst->buf)) == 0)
       return 0;
+
    dst->size += size;
 
    // Unpack payload length
@@ -84,13 +99,8 @@ uint32_t pkt_recv(int fd, Packet* dst)
    int len = unpack_size(dst->buf + 1, &pending);
    char* ptr = dst->buf + 1 + len;
 
-   // Assert
-   if((pending + size) > dst->bufsize) {
-      error_msg("packet bufsize too small, bufsize: %u packet size: %u.", dst->bufsize, pending + size);
-      exit(1);
-   }
-
    // Receive payload
+   pkt_reserve(dst, dst->size + pending);
    if(pending > 0) {
       if((size = recv_full(fd, ptr, pending)) == 0)
          return 0;
@@ -117,25 +127,29 @@ int pkt_send(Packet* pkt, int fd)
 
 int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val)
 {
+   // Reserve packet size
+   uint16_t isize = sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint16_t) + len;
+   pkt_reserve(pkt, pkt->size + isize);
    char* dst = pkt->buf + pkt->size;
 
    // Write T-L-V
    uint16_t wlen = htons(len);
-   uint16_t written = 0; char prefix = 0x82;
-   memcpy(dst + written, &type, sizeof(char));    written += sizeof(char);
-   memcpy(dst + written, &prefix, sizeof(char));  written += sizeof(char);
-   memcpy(dst + written, &wlen,sizeof(uint16_t)); written += sizeof(uint16_t);
+   uint8_t prefix = 0x82;
+   *dst = type;  dst += sizeof(uint8_t);
+   *dst = prefix; dst += sizeof(uint8_t);
+   memcpy(dst, &wlen,  sizeof(uint16_t)); dst += sizeof(uint16_t);
    if(len > 0) {
-      memcpy(dst + written, val, len);
-      written += len;
+      memcpy(dst, val, len);
+      dst += len;
    }
 
    // Update write pos and packet size
-   pkt->size += written;
+   /// \todo Calculate size only in finalize.
+   pkt->size += isize;
    uint32_t nsize = pkt->size - PACKET_MINSIZE;
    nsize = htonl(nsize);
    memcpy(pkt->buf + 2, &nsize, sizeof(uint32_t));
-   return written;
+   return isize;
 }
 
 int pkt_addnumeric(Packet* pkt, uint8_t type, uint16_t len, int32_t val)

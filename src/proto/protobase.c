@@ -29,6 +29,7 @@
 
 uint32_t recv_full(int fd, char* buf, uint32_t pending)
 {
+
    // Read packet header
    int rcvd = 0;
    uint32_t read = 0;

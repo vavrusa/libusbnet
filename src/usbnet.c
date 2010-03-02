@@ -46,11 +46,30 @@ static void usb_destroy_configuration(struct usb_device *dev);
 /* Call serialization.
  */
 static pthread_mutex_t __mutex = PTHREAD_MUTEX_INITIALIZER;
-static void call_lock() {
+
+/* Shared packet. */
+Packet* sPacket = NULL;
+
+/** Claim shared packet buffer.
+  */
+Packet* pkt_claim() {
+
+   // Lock global lock
    pthread_mutex_lock(&__mutex);
+
+   // Alloc if needed
+   if(sPacket == NULL) {
+      sPacket = pkt_new(1, 0x00);
+   }
+
+   return sPacket;
 }
 
-static void call_release() {
+/** Release shared packet buffer.
+  */
+void pkt_release() {
+
+   // Unlock global lock
    pthread_mutex_unlock(&__mutex);
 }
 
@@ -72,6 +91,10 @@ void deinit_hostfd() {
 
    // Unhook global variable
    usb_busses = 0;
+
+   // Free global packet
+   if(sPacket != NULL)
+      pkt_free(sPacket);
 
    // Free busses
    struct usb_bus* cur = NULL;
@@ -162,16 +185,14 @@ int init_hostfd() {
 /** Initialize USB subsystem. */
 void usb_init(void)
 {
-   // Initialize remote fd
-   call_lock();
+   // Initialize packet & remote fd
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Create buffer
-   char buf[PACKET_MINSIZE];
-   Packet pkt = pkt_create(buf, PACKET_MINSIZE);
-   pkt_init(&pkt, UsbInit);
-   pkt_send(&pkt, fd);
-   call_release();
+   pkt_init(pkt, UsbInit);
+   pkt_send(pkt, fd);
+   pkt_release();
 
    // Initialize locally
    debug_msg("called");
@@ -183,26 +204,24 @@ void usb_init(void)
 int usb_find_busses(void)
 {
   // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
-   // Create buffer
-   char buf[32];
-   Packet pkt = pkt_create(buf, 32);
-   pkt_init(&pkt, UsbFindBusses);
-   pkt_send(&pkt, fd);
+   // Initialize pkt
+   pkt_init(pkt, UsbFindBusses);
+   pkt_send(pkt, fd);
 
    // Get number of changes
    int res = 0;
    Iterator it;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbFindBusses) {
-      if(pkt_begin(&pkt, &it) != NULL) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbFindBusses) {
+      if(pkt_begin(pkt, &it) != NULL) {
          res = iter_getint(&it);
       }
    }
 
    // Return remote result
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -214,20 +233,18 @@ int usb_find_busses(void)
 int usb_find_devices(void)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Create buffer
-   char buf[8192];
-   Packet pkt = pkt_create(buf, 8192);
-   pkt_init(&pkt, UsbFindDevices);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbFindDevices);
+   pkt_send(pkt, fd);
 
    // Get number of changes
    int res = 0;
    Iterator it;
-   if(pkt_recv(fd, &pkt) > 0) {
-      pkt_begin(&pkt, &it);
+   if(pkt_recv(fd, pkt) > 0) {
+      pkt_begin(pkt, &it);
 
       // Get return value
       res = iter_getint(&it);
@@ -437,7 +454,7 @@ int usb_find_devices(void)
    }
 
    // Return remote result
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -458,22 +475,20 @@ struct usb_bus* usb_get_busses(void)
 usb_dev_handle *usb_open(struct usb_device *dev)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Send packet
-   char buf[255];
-   Packet pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbOpen);
-   pkt_adduint(&pkt, dev->bus->location);
-   pkt_adduint(&pkt, dev->devnum);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbOpen);
+   pkt_adduint(pkt, dev->bus->location);
+   pkt_adduint(pkt, dev->devnum);
+   pkt_send(pkt, fd);
 
    // Get response
    int res = -1, devfd = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbOpen) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbOpen) {
       Iterator it;
-      pkt_begin(&pkt, &it);
+      pkt_begin(pkt, &it);
       res = iter_getint(&it);
       devfd = iter_getint(&it);
    }
@@ -488,7 +503,7 @@ usb_dev_handle *usb_open(struct usb_device *dev)
       udev->config = udev->interface = udev->altsetting = -1;
    }
 
-   call_release();
+   pkt_release();
    debug_msg("returned %d (fd %d)", res, devfd);
    return udev;
 }
@@ -496,28 +511,26 @@ usb_dev_handle *usb_open(struct usb_device *dev)
 int usb_close(usb_dev_handle *dev)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Send packet
-   char buf[255];
-   Packet pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbClose);
-   pkt_addint(&pkt, dev->fd);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbClose);
+   pkt_addint(pkt, dev->fd);
+   pkt_send(pkt, fd);
 
    // Free device
    free(dev);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbClose) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbClose) {
       Iterator it;
-      pkt_begin(&pkt, &it);
+      pkt_begin(pkt, &it);
       res = iter_getint(&it);
    }
 
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -525,22 +538,20 @@ int usb_close(usb_dev_handle *dev)
 int usb_set_configuration(usb_dev_handle *dev, int configuration)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Prepare packet
-   char buf[255];
-   Packet pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbSetConfiguration);
-   pkt_addint(&pkt, dev->fd);
-   pkt_addint(&pkt, configuration);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbSetConfiguration);
+   pkt_addint(pkt, dev->fd);
+   pkt_addint(pkt, configuration);
+   pkt_send(pkt, fd);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbSetConfiguration) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbSetConfiguration) {
       Iterator it;
-      pkt_begin(&pkt, &it);
+      pkt_begin(pkt, &it);
 
       // Read result
       res = iter_getint(&it);
@@ -553,7 +564,7 @@ int usb_set_configuration(usb_dev_handle *dev, int configuration)
    dev->config = configuration;
 
    // Return response
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -561,22 +572,20 @@ int usb_set_configuration(usb_dev_handle *dev, int configuration)
 int usb_set_altinterface(usb_dev_handle *dev, int alternate)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Prepare packet
-   char buf[255];
-   Packet pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbSetAltInterface);
-   pkt_addint(&pkt, dev->fd);
-   pkt_addint(&pkt, alternate);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbSetAltInterface);
+   pkt_addint(pkt, dev->fd);
+   pkt_addint(pkt, alternate);
+   pkt_send(pkt, fd);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbSetAltInterface) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbSetAltInterface) {
       Iterator it;
-      pkt_begin(&pkt, &it);
+      pkt_begin(pkt, &it);
 
       // Read result
       res = iter_getint(&it);
@@ -589,7 +598,7 @@ int usb_set_altinterface(usb_dev_handle *dev, int alternate)
    dev->altsetting = alternate;
 
    // Return response
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -597,29 +606,27 @@ int usb_set_altinterface(usb_dev_handle *dev, int alternate)
 int usb_resetep(usb_dev_handle *dev, unsigned int ep)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Prepare packet
-   char buf[255];
-   Packet pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbResetEp);
-   pkt_addint(&pkt,  dev->fd);
-   pkt_adduint(&pkt, ep);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbResetEp);
+   pkt_addint(pkt,  dev->fd);
+   pkt_adduint(pkt, ep);
+   pkt_send(pkt, fd);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbResetEp) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbResetEp) {
       Iterator it;
-      pkt_begin(&pkt, &it);
+      pkt_begin(pkt, &it);
 
       // Read result
       res = iter_getint(&it);
    }
 
    // Return response
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -627,29 +634,27 @@ int usb_resetep(usb_dev_handle *dev, unsigned int ep)
 int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Prepare packet
-   char buf[255];
-   Packet pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbClearHalt);
-   pkt_addint(&pkt, dev->fd);
-   pkt_adduint(&pkt, ep);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbClearHalt);
+   pkt_addint(pkt, dev->fd);
+   pkt_adduint(pkt, ep);
+   pkt_send(pkt, fd);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbClearHalt) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbClearHalt) {
       Iterator it;
-      pkt_begin(&pkt, &it);
+      pkt_begin(pkt, &it);
 
       // Read result
       res = iter_getint(&it);
    }
 
    // Return response
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -657,28 +662,26 @@ int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
 int usb_reset(usb_dev_handle *dev)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Prepare packet
-   char buf[255];
-   Packet pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbReset);
-   pkt_addint(&pkt, dev->fd);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbReset);
+   pkt_addint(pkt, dev->fd);
+   pkt_send(pkt, fd);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbReset) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbReset) {
       Iterator it;
-      pkt_begin(&pkt, &it);
+      pkt_begin(pkt, &it);
 
       // Read result
       res = iter_getint(&it);
    }
 
    // Return response
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -686,26 +689,24 @@ int usb_reset(usb_dev_handle *dev)
 int usb_claim_interface(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Send packet
-   char buf[255];
-   Packet pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbClaimInterface);
-   pkt_addint(&pkt, dev->fd);
-   pkt_addint(&pkt, interface);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbClaimInterface);
+   pkt_addint(pkt, dev->fd);
+   pkt_addint(pkt, interface);
+   pkt_send(pkt, fd);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbClaimInterface) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbClaimInterface) {
       Iterator it;
-      pkt_begin(&pkt, &it);
+      pkt_begin(pkt, &it);
       res = iter_getint(&it);
    }
 
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -713,26 +714,24 @@ int usb_claim_interface(usb_dev_handle *dev, int interface)
 int usb_release_interface(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Send packet
-   char buf[255];
-   Packet pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbReleaseInterface);
-   pkt_addint(&pkt, dev->fd);
-   pkt_addint(&pkt, interface);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbReleaseInterface);
+   pkt_addint(pkt, dev->fd);
+   pkt_addint(pkt, interface);
+   pkt_send(pkt, fd);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbReleaseInterface) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbReleaseInterface) {
       Iterator it;
-      pkt_begin(&pkt, &it);
+      pkt_begin(pkt, &it);
       res = iter_getint(&it);
    }
 
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -745,11 +744,10 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
         int value, int index, char *bytes, int size, int timeout)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Prepare packet
-   Packet* pkt = pkt_new(size + 128, UsbControlMsg);
    pkt_addint(pkt, dev->fd);
    pkt_addint(pkt, requesttype);
    pkt_addint(pkt, request);
@@ -774,8 +772,7 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
    }
 
    // Return response
-   pkt_free(pkt);
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -787,11 +784,10 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
 int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Prepare packet
-   Packet* pkt = pkt_new(size + 128, UsbBulkRead);
    pkt_addint(pkt, dev->fd);
    pkt_addint(pkt, ep);
    pkt_addint(pkt, size);
@@ -814,8 +810,7 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
    }
 
    // Return response
-   pkt_free(pkt);
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -823,11 +818,10 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
 int usb_bulk_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int timeout)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Prepare packet
-   Packet* pkt = pkt_new(size + 128, UsbBulkWrite);
    pkt_addint(pkt, dev->fd);
    pkt_addint(pkt, ep);
    pkt_addstr(pkt, size,        bytes);
@@ -843,8 +837,7 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int t
    }
 
    // Return response
-   pkt_free(pkt);
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -855,11 +848,10 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int t
 int usb_interrupt_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int timeout)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Prepare packet
-   Packet* pkt = pkt_new(size + 128, UsbInterruptWrite);
    pkt_addint(pkt, dev->fd);
    pkt_addint(pkt, ep);
    pkt_addstr(pkt, size, bytes);
@@ -875,8 +867,7 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, 
    }
 
    // Return response
-   pkt_free(pkt);
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -884,11 +875,10 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, 
 int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Prepare packet
-   Packet* pkt = pkt_new(size + 128, UsbInterruptRead);
    pkt_addint(pkt, dev->fd);
    pkt_addint(pkt, ep);
    pkt_addint(pkt, size);
@@ -910,8 +900,7 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
    }
 
    // Return response
-   pkt_free(pkt);
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 }
@@ -923,26 +912,24 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
 int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
-   call_lock();
+   Packet* pkt = pkt_claim();
    int fd = init_hostfd();
 
    // Send packet
-   char buf[255];
-   Packet pkt = pkt_create(buf, 255);
-   pkt_init(&pkt, UsbDetachKernelDriver);
-   pkt_addint(&pkt, dev->fd);
-   pkt_addint(&pkt, interface);
-   pkt_send(&pkt, fd);
+   pkt_init(pkt, UsbDetachKernelDriver);
+   pkt_addint(pkt, dev->fd);
+   pkt_addint(pkt, interface);
+   pkt_send(pkt, fd);
 
    // Get response
    int res = -1;
-   if(pkt_recv(fd, &pkt) > 0 && pkt_op(&pkt) == UsbDetachKernelDriver) {
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbDetachKernelDriver) {
       Iterator it;
-      pkt_begin(&pkt, &it);
+      pkt_begin(pkt, &it);
       res = iter_getint(&it);
    }
 
-   call_release();
+   pkt_release();
    debug_msg("returned %d", res);
    return res;
 
