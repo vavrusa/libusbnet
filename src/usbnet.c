@@ -59,7 +59,7 @@ Packet* pkt_claim() {
 
    // Alloc if needed
    if(sPacket == NULL) {
-      sPacket = pkt_new(1, 0x00);
+      sPacket = pkt_new(BUF_FRAGLEN, 0x00);
    }
 
    return sPacket;

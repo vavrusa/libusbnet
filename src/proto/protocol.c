@@ -26,12 +26,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 Packet* pkt_new(uint32_t size, uint8_t op) {
 
    // Minimum packet size is PACKET_MINSIZE
    if(size < PACKET_MINSIZE) {
-      fprintf(stderr, "%s: minimum packet size is %ldB\n", __func__, PACKET_MINSIZE);
+      error_msg("%s: minimum packet size is %luB (requested %luB)", __func__, PACKET_MINSIZE, size);
       size = PACKET_MINSIZE;
    }
 
@@ -53,7 +54,7 @@ void pkt_free(Packet* pkt) {
 void pkt_init(Packet* pkt, uint8_t op)
 {
    // Clear
-   memset(pkt->buf, 0, pkt->bufsize);
+   memset(pkt->buf, 0, PACKET_MINSIZE);
 
    // Set opcode
    pkt->buf[0] = (char) op;
@@ -65,7 +66,6 @@ void pkt_init(Packet* pkt, uint8_t op)
 
 int pkt_reserve(Packet* pkt, uint32_t size)
 {
-   debug_msg("current %u requested %d", pkt->bufsize, size);
    if(pkt->bufsize < size) {
       debug_msg("reallocating packet from %u -> %d", pkt->bufsize, size + BUF_FRAGLEN);
       pkt->bufsize = size + BUF_FRAGLEN;
@@ -88,7 +88,7 @@ uint32_t pkt_recv(int fd, Packet* dst)
    dst->size = 0;
 
    // Read packet header
-   pkt_reserve(dst, PACKET_MINSIZE);
+   assert(pkt_reserve(dst, PACKET_MINSIZE));
    if((size = pkt_recv_header(fd, dst->buf)) == 0)
       return 0;
 
@@ -97,10 +97,10 @@ uint32_t pkt_recv(int fd, Packet* dst)
    // Unpack payload length
    uint32_t pending = 0;
    int len = unpack_size(dst->buf + 1, &pending);
+   assert(pkt_reserve(dst, dst->size + pending));
    char* ptr = dst->buf + 1 + len;
 
    // Receive payload
-   pkt_reserve(dst, dst->size + pending);
    if(pending > 0) {
       if((size = recv_full(fd, ptr, pending)) == 0)
          return 0;
@@ -129,7 +129,7 @@ int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val)
 {
    // Reserve packet size
    uint16_t isize = sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint16_t) + len;
-   pkt_reserve(pkt, pkt->size + isize);
+   assert(pkt_reserve(pkt, pkt->size + isize));
    char* dst = pkt->buf + pkt->size;
 
    // Write T-L-V
