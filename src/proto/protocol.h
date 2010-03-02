@@ -71,12 +71,6 @@ typedef struct {
  *  \todo Fixed size packets boundaries checking.
  */
 
-/** Initialize packet on existing buffer.
-  * \param buf must be char* or char[]
-  * \param size real buffer size
-  */
-#define pkt_create(buf, size) { size, 0, buf }
-
 /** Return packet opcode.
   */
 #define pkt_op(pkt) ((pkt)->buf[0])
