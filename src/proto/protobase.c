@@ -26,6 +26,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/shm.h>
+#include <netinet/in.h>
 
 uint32_t recv_full(int fd, char* buf, uint32_t pending)
 {
@@ -157,6 +159,82 @@ int as_int(void* data, uint32_t bytes)
 const char* as_string(void* data, uint32_t bytes)
 {
    return (const char*) data;
+}
+
+int ipc_init()
+{
+   int shm_id = 0;
+   log_msg("IPC: creating segment at key 0x%x (%d bytes)", SHM_KEY, SHM_SIZE);
+   if((shm_id = shmget(SHM_KEY, SHM_SIZE, IPC_CREAT|0666)) == -1) {
+      perror("shmget");
+   }
+
+   return shm_id;
+}
+
+int ipc_teardown(int shm_id)
+{
+   log_msg("IPC: removing segment %d", shm_id);
+   return shmctl(shm_id, IPC_RMID, NULL);
+}
+
+int ipc_get_remote()
+{
+   // Get fd from SHM
+   int fd = 0;
+
+   // Get fd from SHM
+   int shm_id = 0;
+   printf("IPC: accessing segment at key 0x%x (%d bytes)\n", SHM_KEY, SHM_SIZE);
+   if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) != -1) {
+
+      // Attach segment and read fd
+      printf("IPC: attaching segment %d\n", shm_id);
+      void* shm_addr = NULL;
+      if ((shm_addr = shmat(shm_id, NULL, 0)) != (void *) -1) {
+
+         // Read fd
+         fd = *((int*) shm_addr);
+
+         // Detach
+         shmdt(shm_addr);
+      }
+   }
+
+   // Check resulting fd
+   printf("IPC: remote fd is %d\n", fd);
+
+   // Check peer name - keep-alive
+   struct sockaddr_in addr;
+   int len = sizeof(addr);
+   if(getpeername(fd, (struct sockaddr*)& addr, &len) < 0)
+      fd = -1;
+
+   return fd;
+}
+
+int ipc_set_remote(int fd)
+{
+   // Save fd to SHM
+   int shm_id = 0;
+   printf("IPC: accessing segment at key 0x%x (%d bytes)\n", SHM_KEY, SHM_SIZE);
+   if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) != -1) {
+
+      // Attach segment and read fd
+      printf("IPC: attaching segment %d\n", shm_id);
+      void* shm_addr = NULL;
+      if ((shm_addr = shmat(shm_id, NULL, 0)) != (void *) -1) {
+
+         // Read fd
+         *((int*) shm_addr) = fd;
+         log_msg("IPC: remote socket descriptor %d is stored shm(%d:%p)", fd, shm_id, shm_addr);
+
+         // Detach
+         shmdt(shm_addr);
+      }
+   }
+
+   return shm_id;
 }
 
 /** @} */

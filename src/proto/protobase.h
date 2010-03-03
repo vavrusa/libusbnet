@@ -95,6 +95,25 @@ int as_int(void* data, uint32_t bytes);
   */
 const char* as_string(void* data, uint32_t bytes);
 
+/** Create SHM segment.
+  */
+int ipc_init();
+
+/** Close SHM segment.
+  */
+int ipc_teardown(int);
+
+/** Return host socket descriptor.
+  * Retrieve socket descriptor from SHM.
+  */
+int ipc_get_remote();
+
+/** Save host socket descriptor.
+  * Save socket descriptor to SHM.
+  */
+int ipc_set_remote(int fd);
+
+
 #ifdef __cplusplus
 }
 #endif
