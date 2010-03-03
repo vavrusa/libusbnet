@@ -179,27 +179,37 @@ int ipc_teardown(int shm_id)
    return shmctl(shm_id, IPC_RMID, NULL);
 }
 
+static void* ipc_get_addr() {
+
+   // Get segment
+   int shm_id = 0;
+   if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) != -1) {
+
+      // Attach segment and read fd
+      printf("IPC: accessing segment %d\n", shm_id);
+      void* shm_addr = NULL;
+      if ((shm_addr = shmat(shm_id, NULL, 0)) != (void *) -1)
+         return shm_addr;
+
+   }
+
+   return NULL;
+}
+
 int ipc_get_remote()
 {
    // Get fd from SHM
    int fd = 0;
 
-   // Get fd from SHM
-   int shm_id = 0;
-   printf("IPC: accessing segment at key 0x%x (%d bytes)\n", SHM_KEY, SHM_SIZE);
-   if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) != -1) {
+   // Get SHM address
+   void* shm_addr = ipc_get_addr();
+   if(shm_addr != NULL) {
 
-      // Attach segment and read fd
-      printf("IPC: attaching segment %d\n", shm_id);
-      void* shm_addr = NULL;
-      if ((shm_addr = shmat(shm_id, NULL, 0)) != (void *) -1) {
+      // Read fd
+      fd = *((int*) shm_addr);
 
-         // Read fd
-         fd = *((int*) shm_addr);
-
-         // Detach
-         shmdt(shm_addr);
-      }
+      // Detach
+      shmdt(shm_addr);
    }
 
    // Check resulting fd
@@ -217,25 +227,19 @@ int ipc_get_remote()
 int ipc_set_remote(int fd)
 {
    // Save fd to SHM
-   int shm_id = 0;
-   printf("IPC: accessing segment at key 0x%x (%d bytes)\n", SHM_KEY, SHM_SIZE);
-   if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) != -1) {
+   void* shm_addr = ipc_get_addr();
+   if(shm_addr != NULL) {
 
-      // Attach segment and read fd
-      printf("IPC: attaching segment %d\n", shm_id);
-      void* shm_addr = NULL;
-      if ((shm_addr = shmat(shm_id, NULL, 0)) != (void *) -1) {
+      // Read fd
+      *((int*) shm_addr) = fd;
+      log_msg("IPC: stored remote socket descriptor %d", fd);
 
-         // Read fd
-         *((int*) shm_addr) = fd;
-         log_msg("IPC: remote socket descriptor %d is stored shm(%d:%p)", fd, shm_id, shm_addr);
-
-         // Detach
-         shmdt(shm_addr);
-      }
+      // Detach
+      shmdt(shm_addr);
+      return 1;
    }
 
-   return shm_id;
+   return -1;
 }
 
 /** @} */
