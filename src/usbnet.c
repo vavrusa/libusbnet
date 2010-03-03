@@ -27,9 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <pthread.h>
-#include <sys/shm.h>
-#include <netinet/in.h>
 #include "usbnet.h"
 #include "protocol.h"
 
@@ -43,60 +40,27 @@ typedef char *usb_buf_t;
  */
 static void usb_destroy_configuration(struct usb_device *dev);
 
-/* Call serialization.
- */
-static pthread_mutex_t __mutex = PTHREAD_MUTEX_INITIALIZER;
-
-/* Shared packet. */
-Packet* sPacket = NULL;
-
-/** Claim shared packet buffer.
-  */
-Packet* pkt_claim() {
-
-   // Lock global lock
-   pthread_mutex_lock(&__mutex);
-
-   // Alloc if needed
-   if(sPacket == NULL) {
-      sPacket = pkt_new(BUF_FRAGLEN, 0x00);
-   }
-
-   return sPacket;
-}
-
-/** Release shared packet buffer.
-  */
-void pkt_release() {
-
-   // Unlock global lock
-   pthread_mutex_unlock(&__mutex);
-}
-
 //! Remote socket filedescriptor
 static int __remote_fd = -1;
 
 //! Remote USB busses with devices
+static struct usb_bus* __orig_bus   = NULL;
 static struct usb_bus* __remote_bus = NULL;
 extern struct usb_bus* usb_busses;
 
-/* Global variables manipulators.
- */
-
-/** Free allocated busses and virtual devices.
-  * Function is called on executable exit (atexit()).
-  */
-void deinit_hostfd() {
-   debug_msg("freeing busses ...");
+void session_teardown() {
 
    // Unhook global variable
-   usb_busses = 0;
+   debug_msg("unhooking virtual bus ...");
+   usb_busses = __orig_bus;
 
    // Free global packet
-   if(sPacket != NULL)
-      pkt_free(sPacket);
+   debug_msg("deallocating shared packet ...");
+   if(pkt_shared() != NULL)
+      pkt_free(pkt_shared());
 
    // Free busses
+   debug_msg("freeing busses ...");
    struct usb_bus* cur = NULL;
    while(__remote_bus != NULL) {
 
@@ -122,49 +86,19 @@ void deinit_hostfd() {
    }
 }
 
-/** Return host socket descriptor.
-  * Retrieve socket descriptor from SHM if not present
-  * and hook exit function for cleanup.
-  */
-int init_hostfd() {
+int session_get() {
 
    // Check exit function
    static char exitf_hooked = 0;
    if(!exitf_hooked) {
-      atexit(&deinit_hostfd);
+      atexit(&session_teardown);
       exitf_hooked = 1;
    }
 
-   // Check fd
+   // Retrieve remote sock from SHM
    if(__remote_fd == -1) {
-
-      // Get fd from SHM
-      int shm_id = 0;
-      printf("IPC: accessing segment at key 0x%x (%d bytes)\n", SHM_KEY, SHM_SIZE);
-      if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) != -1) {
-
-         // Attach segment and read fd
-         printf("IPC: attaching segment %d\n", shm_id);
-         void* shm_addr = NULL;
-         if ((shm_addr = shmat(shm_id, NULL, 0)) != (void *) -1) {
-
-            // Read fd
-            __remote_fd = *((int*) shm_addr);
-
-            // Detach
-            shmdt(shm_addr);
-         }
-      }
-
-      // Check resulting fd
-      printf("IPC: remote fd is %d\n", __remote_fd);
+      __remote_fd = ipc_get_remote();
    }
-
-   // Check peer name - keep-alive
-   struct sockaddr_in addr;
-   int len = sizeof(addr);
-   if(getpeername(__remote_fd, (struct sockaddr*)& addr, &len) < 0)
-      __remote_fd = -1;
 
    if(__remote_fd == -1) {
       fprintf(stderr, "IPC: unable to access remote fd\n");
@@ -173,6 +107,7 @@ int init_hostfd() {
 
    return __remote_fd;
 }
+
 
 /* libusb functions reimplementation.
  * \see http://libusb.sourceforge.net/doc/functions.html
@@ -187,7 +122,7 @@ void usb_init(void)
 {
    // Initialize packet & remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Create buffer
    pkt_init(pkt, UsbInit);
@@ -205,7 +140,7 @@ int usb_find_busses(void)
 {
   // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Initialize pkt
    pkt_init(pkt, UsbFindBusses);
@@ -234,7 +169,7 @@ int usb_find_devices(void)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Create buffer
    pkt_init(pkt, UsbFindDevices);
@@ -446,6 +381,7 @@ int usb_find_devices(void)
 
       // Save busses
       if(__remote_bus == NULL) {
+         __orig_bus = usb_busses;
          debug_msg("overriding global usb_busses from %p to %p", usb_busses, vbus.next);
       }
 
@@ -476,7 +412,7 @@ usb_dev_handle *usb_open(struct usb_device *dev)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Send packet
    pkt_init(pkt, UsbOpen);
@@ -512,7 +448,7 @@ int usb_close(usb_dev_handle *dev)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Send packet
    pkt_init(pkt, UsbClose);
@@ -539,7 +475,7 @@ int usb_set_configuration(usb_dev_handle *dev, int configuration)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Prepare packet
    pkt_init(pkt, UsbSetConfiguration);
@@ -573,7 +509,7 @@ int usb_set_altinterface(usb_dev_handle *dev, int alternate)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Prepare packet
    pkt_init(pkt, UsbSetAltInterface);
@@ -607,7 +543,7 @@ int usb_resetep(usb_dev_handle *dev, unsigned int ep)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Prepare packet
    pkt_init(pkt, UsbResetEp);
@@ -635,7 +571,7 @@ int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Prepare packet
    pkt_init(pkt, UsbClearHalt);
@@ -663,7 +599,7 @@ int usb_reset(usb_dev_handle *dev)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Prepare packet
    pkt_init(pkt, UsbReset);
@@ -690,7 +626,7 @@ int usb_claim_interface(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Send packet
    pkt_init(pkt, UsbClaimInterface);
@@ -715,7 +651,7 @@ int usb_release_interface(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Send packet
    pkt_init(pkt, UsbReleaseInterface);
@@ -745,7 +681,7 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Prepare packet
    pkt_init(pkt, UsbControlMsg);
@@ -786,7 +722,7 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Prepare packet
    pkt_init(pkt, UsbBulkRead);
@@ -821,7 +757,7 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int t
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Prepare packet
    pkt_init(pkt, UsbBulkWrite);
@@ -852,7 +788,7 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, 
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Prepare packet
    pkt_init(pkt, UsbInterruptWrite);
@@ -880,7 +816,7 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Prepare packet
    pkt_init(pkt, UsbInterruptRead);
@@ -918,7 +854,7 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
    Packet* pkt = pkt_claim();
-   int fd = init_hostfd();
+   int fd = session_get();
 
    // Send packet
    pkt_init(pkt, UsbDetachKernelDriver);
