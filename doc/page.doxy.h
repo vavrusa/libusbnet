@@ -45,29 +45,27 @@
     \code
     int function_call(int param)
     {
-      call_lock(); // Synchronize
-      int fd = init_hostfd(); // Get remote socket descriptor
+      Packet* pkt_claim();    // Claim shared buffer (efficient and synchronous)
+      int fd = session_get(); // Get remote socket descriptor
     \endcode
     Send packet with opcode and paramter.
     \code
-      char buf[32]; // Create static packet (32B)
-      Packet pkt = pkt_create(buf, PACKET_MINSIZE); // Create packet
-      pkt_init(&pkt, OpCode1); // Initialize packet
-      pkt_addint(&pkt, param); // Append parameter
-      pkt_send(&pkt, fd); // Send packet
+      pkt_init(pkt, OpCode1); // Initialize packet
+      pkt_addint(pkt, param); // Append parameter
+      pkt_send(pkt, fd);      // Send packet
     \endcode
     Receive and store result value.
     \code
       Iterator it;
       int res = -1;
-      if(pkt_recv(fd, &pkt) > 0) { // Receive packet
-         pkt_begin(&pkt, &it); // Initialize iterator
-         res = iter_getint(&it); // Save result
+      if(pkt_recv(fd, pkt) > 0) { // Receive packet
+         pkt_begin(pkt, &it);     // Initialize iterator
+         res = iter_getint(&it);  // Save result
       }
     \endcode
     Release call lock and return value.
     \code
-      call_release(); // Release lock
+      pkt_release(); // Release shared buffer
       return res;
     }
     \endcode
