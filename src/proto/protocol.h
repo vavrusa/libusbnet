@@ -60,6 +60,7 @@
 typedef struct {
    uint32_t bufsize;
    uint32_t size;
+   uint8_t  op;
    char* buf;
 } Packet;
 
@@ -77,7 +78,7 @@ typedef struct {
 
 /** Return packet opcode.
   */
-#define pkt_op(pkt) ((pkt)->buf[0])
+#define pkt_op(pkt) ((pkt)->op)
 
 /** Allocate new packet.
   * Minimal packet size is 1 + 4B.

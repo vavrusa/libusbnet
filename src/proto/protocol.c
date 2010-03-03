@@ -30,10 +30,10 @@
 
 Packet* pkt_new(uint32_t size, uint8_t op) {
 
-   // Minimum packet size is PACKET_MINSIZE
-   if(size < PACKET_MINSIZE) {
-      error_msg("%s: minimum packet size is %luB (requested %luB)", __func__, PACKET_MINSIZE, size);
-      size = PACKET_MINSIZE;
+   // Check packet size
+   if(size == 0) {
+      error_msg("%s: invalid packet size (size = 0)", __func__);
+      return NULL;
    }
 
    // Alloc packet
@@ -53,32 +53,20 @@ void pkt_free(Packet* pkt) {
 
 void pkt_init(Packet* pkt, uint8_t op)
 {
-   // Clear
-   memset(pkt->buf, 0, PACKET_MINSIZE);
-
-   // Set opcode
-   pkt->buf[0] = (char) op;
-   pkt->buf[1] = 0x84; //! \todo C API packet size packing.
-
-   // Set data pos
-   pkt->size = PACKET_MINSIZE;
+   // Set opcode and resize
+   pkt->op = op;
+   pkt->size = 0;
 }
 
 int pkt_reserve(Packet* pkt, uint32_t size)
 {
    if(pkt->bufsize < size) {
-      debug_msg("reallocating packet from %u -> %d", pkt->bufsize, size + BUF_FRAGLEN);
       pkt->bufsize = size + BUF_FRAGLEN;
       if((pkt->buf = realloc(pkt->buf, pkt->bufsize)) == NULL)
          pkt->bufsize = 0;
    }
 
    return pkt->buf != NULL;
-}
-
-uint32_t pkt_size(Packet* pkt)
-{
-   return pkt->size;
 }
 
 uint32_t pkt_recv(int fd, Packet* dst)
@@ -92,20 +80,18 @@ uint32_t pkt_recv(int fd, Packet* dst)
    if((size = pkt_recv_header(fd, dst->buf)) == 0)
       return 0;
 
-   dst->size += size;
-
-   // Unpack payload length
-   uint32_t pending = 0;
-   int len = unpack_size(dst->buf + 1, &pending);
-   assert(pkt_reserve(dst, dst->size + pending));
-   char* ptr = dst->buf + 1 + len;
+   // Parse packet header
+   dst->size = 0;
+   dst->op = dst->buf[0];
+   unpack_size(dst->buf + 1, &dst->size);
 
    // Receive payload
-   if(pending > 0) {
-      if((size = recv_full(fd, ptr, pending)) == 0)
-         return 0;
+   if(dst->size > 0) {
 
-      dst->size += size;
+      // Check buffer size
+      assert(pkt_reserve(dst, dst->size));
+      if((dst->size = recv_full(fd, dst->buf, dst->size)) == 0)
+         return 0;
    }
 
    #ifdef DEBUG
@@ -122,6 +108,15 @@ int pkt_send(Packet* pkt, int fd)
    //pkt_dump(pkt->buf, pkt->size);
    #endif
 
+   // Send opcode
+   char buf[PACKET_MINSIZE] = { pkt->op };
+   send(fd, buf, 1, 0);
+
+   // Send size
+   int len = pack_size(pkt->size, buf);
+   send(fd, buf, len, 0);
+
+   // Send payload
    return send(fd, pkt->buf, pkt->size, 0);
 }
 
@@ -133,22 +128,16 @@ int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val)
    char* dst = pkt->buf + pkt->size;
 
    // Write T-L-V
+   *dst = type; dst += sizeof(uint8_t);
+   *dst = 0x82; dst += sizeof(uint8_t);
    uint16_t wlen = htons(len);
-   uint8_t prefix = 0x82;
-   *dst = type;  dst += sizeof(uint8_t);
-   *dst = prefix; dst += sizeof(uint8_t);
-   memcpy(dst, &wlen,  sizeof(uint16_t)); dst += sizeof(uint16_t);
+   memcpy(dst, &wlen, sizeof(uint16_t));
    if(len > 0) {
-      memcpy(dst, val, len);
-      dst += len;
+      memcpy(dst + sizeof(uint16_t), val, len);
    }
 
-   // Update write pos and packet size
-   /// \todo Calculate size only in finalize.
+   // Update packet size
    pkt->size += isize;
-   uint32_t nsize = pkt->size - PACKET_MINSIZE;
-   nsize = htonl(nsize);
-   memcpy(pkt->buf + 2, &nsize, sizeof(uint32_t));
    return isize;
 }
 
@@ -175,19 +164,15 @@ int pkt_addnumeric(Packet* pkt, uint8_t type, uint16_t len, int32_t val)
 
 void* pkt_begin(Packet* pkt, Iterator* it)
 {
-   // Invalidate symbol
+   // Invalidate ptrs
    it->type = InvalidType;
    it->len = 0;
    it->cur = it->next = it->end = NULL;
 
    // Check packet size
-   if(pkt_size(pkt) > 1) {
-      uint32_t pktsize;
-      int len = unpack_size(pkt->buf + 1, &pktsize);
-      it->next = pkt->buf + 1 + len;
-      it->end = it->next + pktsize;
-      iter_next(it);
-   }
+   it->next = pkt->buf;
+   it->end = it->next + pkt->size;
+   iter_next(it);
 
    return it->cur;
 }
