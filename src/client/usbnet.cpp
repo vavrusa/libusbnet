@@ -23,9 +23,9 @@
     @{
   */
 #include "clientsocket.hpp"
+#include "protobase.h"
 #include "common.h"
 #include "cmdflags.hpp"
-#include <sys/shm.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <cstdlib>
@@ -111,32 +111,13 @@ int main(int argc, char* argv[])
    setsockopt(remote.sock(), IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
 
    // Create SHM segment
-   int shm_id = 0;
-   log_msg("IPC: creating segment at key 0x%x (%d bytes)", SHM_KEY, SHM_SIZE);
-   if((shm_id = shmget(SHM_KEY, SHM_SIZE, IPC_CREAT|0666)) == -1) {
-      perror("shmget");
+   int shm_id = ipc_init();
+   if(shm_id == -1) {
       return EXIT_FAILURE;
    }
 
    // Attach segment and save fd
-   log_msg("IPC: attaching segment %d", shm_id);
-   void* shm_addr = NULL;
-   if ((shm_addr = shmat(shm_id, NULL, 0)) == (void *) -1) {
-      perror("shmat");
-      return EXIT_FAILURE;
-   }
-
-   // Save fd
-   int* shm = (int*) shm_addr;
-   *shm = remote.sock();
-   log_msg("IPC: socket %d is stored in %d (mapped to %p)", remote.sock(), shm_id, shm);
-
-   // Detach segment
-   log_msg("IPC: detaching segment %d", shm_id);
-   if(shmdt(shm_addr) != 0) {
-      perror("shmdt");
-      return EXIT_FAILURE;
-   }
+   ipc_set_remote(remote.sock());
 
    // Run executable with preloaded library
    std::string execs("LD_PRELOAD=\"");
@@ -152,9 +133,8 @@ int main(int argc, char* argv[])
    log_msg("%s", fill.c_str());
    log_msg("IPC: executable returned %d", ret);
 
-   // Delete segment
-   log_msg("IPC: removing segment %d", shm_id);
-   shmctl(shm_id, IPC_RMID, NULL);
+   // Close IPC
+   ipc_teardown(shm_id);
 
    // Close socket
    if(remote.close() != Socket::Ok) {
