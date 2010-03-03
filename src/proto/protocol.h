@@ -38,30 +38,30 @@
     \endcode
     <h3>How to parse packet</h3>
     \code
-       pkt_begin(&pkt, &it); // Read packet size and enter
+       pkt_begin(pkt, &it); // Read packet size and enter
        printf("int(4B): %d\n", iter_getint(&it)); // Return value as integer, move to next
     \endcode
     <h3>How to write packet</h3>
     \code
-       char buf[PACKET_MINSIZE]; // Buffering on stack
-       Packet pkt = pkt_create(buf, PACKET_MINSIZE); // Static initialization
-       pkt_init(&pkt, UsbInit);  // Write packet header and opcode
-       pkt_addint8(&pkt, 0x4F);  // Append 8bit integer
-       pkt_adduint(&pkt, someval); // Append variable-length unsigned
-       pkt_send(&pkt, fd);       // Send packet
+       Packet* pkt = pkt_claim(); // Claim shared buffer (or pkt_new())
+       pkt_init(pkt, UsbInit);    // Write packet header and opcode
+       pkt_addint8(pkt, 0x4F);    // Append 8bit integer
+       pkt_adduint(pkt, someval); // Append variable-length unsigned
+       pkt_send(pkt, fd);         // Send packet
+       pkt_release();             // Release shared buffer
     \endcode
   */
 
 
 /// Default buffer increase
-#define BUF_FRAGLEN 8
+#define BUF_FRAGLEN 32
 
 /** Packet structure. */
 typedef struct {
-   uint32_t bufsize;
-   uint32_t size;
-   uint8_t  op;
-   char* buf;
+   uint32_t bufsize; //! Buffer size
+   uint32_t size;    //! Payload size
+   uint8_t  op;      //! Opcode
+   char* buf;        //! Payload buffer
 } Packet;
 
 /** Type-Length-Value representation. */
@@ -71,10 +71,6 @@ typedef struct {
    uint32_t len;
    void*    val;
 } Iterator;
-
-/** Packet manipulation interface.
- *  \todo Fixed size packets boundaries checking.
- */
 
 /** Return packet opcode.
   */
@@ -106,6 +102,20 @@ int pkt_reserve(Packet* pkt, uint32_t size);
   * \param op packet opcode
   */
 void pkt_init(Packet* pkt, uint8_t op);
+
+/** Return shared packet.
+  * \return ptr to shared packet
+  */
+Packet* pkt_shared();
+
+/** Claim shared packet buffer.
+  * \return ptr to shared packet
+  */
+Packet* pkt_claim();
+
+/** Release shared packet buffer.
+  */
+void pkt_release();
 
 /** Append parameter to packet.
   * \warning No byte-order conversion applied, raw data copy only.

@@ -26,6 +26,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
+
+/* Shared packet lock. */
+static pthread_mutex_t __mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Shared packet ptr. */
+static Packet* sPacket = NULL;
 
 Packet* pkt_new(uint32_t size, uint8_t op) {
 
@@ -68,6 +75,29 @@ int pkt_reserve(Packet* pkt, uint32_t size)
    }
 
    return pkt->buf != NULL;
+}
+
+Packet* pkt_shared() {
+   return sPacket;
+}
+
+Packet* pkt_claim() {
+
+   // Lock global lock
+   pthread_mutex_lock(&__mutex);
+
+   // Alloc if needed
+   if(sPacket == NULL) {
+      sPacket = pkt_new(BUF_FRAGLEN, 0x00);
+   }
+
+   return pkt_shared();
+}
+
+void pkt_release() {
+
+   // Unlock global lock
+   pthread_mutex_unlock(&__mutex);
 }
 
 uint32_t pkt_recv(int fd, Packet* dst)

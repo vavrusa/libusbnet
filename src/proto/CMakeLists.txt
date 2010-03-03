@@ -3,6 +3,9 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
                      ${CMAKE_CURRENT_SOURCE_DIR}
                      )
 
+# Find pthreads
+find_package(Threads REQUIRED)
+
 # Targets
 set(sources_c protocol.c
               protobase.c

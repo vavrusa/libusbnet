@@ -14,9 +14,6 @@ set(headers   usbnet.h
               ${SHARED_DIR}/common.h
               )
 
-# Find pthreads
-find_package(Threads REQUIRED)
-
 # Client/Server
 add_subdirectory(proto)
 add_subdirectory(client)
