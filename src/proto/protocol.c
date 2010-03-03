@@ -26,7 +26,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
 
 Packet* pkt_new(uint32_t size, uint8_t op) {
 
@@ -62,8 +61,10 @@ int pkt_reserve(Packet* pkt, uint32_t size)
 {
    if(pkt->bufsize < size) {
       pkt->bufsize = size + BUF_FRAGLEN;
-      if((pkt->buf = realloc(pkt->buf, pkt->bufsize)) == NULL)
+      if((pkt->buf = realloc(pkt->buf, pkt->bufsize)) == NULL) {
+         error_msg("%s: failed to allocate packet buffer (size = %u)", __func__, size);
          pkt->bufsize = 0;
+      }
    }
 
    return pkt->buf != NULL;
@@ -76,9 +77,13 @@ uint32_t pkt_recv(int fd, Packet* dst)
    dst->size = 0;
 
    // Read packet header
-   assert(pkt_reserve(dst, PACKET_MINSIZE));
-   if((size = pkt_recv_header(fd, dst->buf)) == 0)
+   if(!pkt_reserve(dst, PACKET_MINSIZE))
       return 0;
+
+   if((size = pkt_recv_header(fd, dst->buf)) == 0) {
+      error_msg("%s: failed to receive packet header", __func__);
+      return 0;
+   }
 
    // Parse packet header
    dst->size = 0;
@@ -89,9 +94,13 @@ uint32_t pkt_recv(int fd, Packet* dst)
    if(dst->size > 0) {
 
       // Check buffer size
-      assert(pkt_reserve(dst, dst->size));
-      if((dst->size = recv_full(fd, dst->buf, dst->size)) == 0)
+      if(!pkt_reserve(dst, dst->size))
          return 0;
+
+      if((dst->size = recv_full(fd, dst->buf, dst->size)) == 0) {
+         error_msg("%s: failed to receive packet payload", __func__);
+         return 0;
+      }
    }
 
    #ifdef DEBUG
@@ -117,14 +126,19 @@ int pkt_send(Packet* pkt, int fd)
    send(fd, buf, len, 0);
 
    // Send payload
-   return send(fd, pkt->buf, pkt->size, 0);
+   if(pkt->size > 0)
+      return send(fd, pkt->buf, pkt->size, 0);
+
+   return 0;
 }
 
 int pkt_append(Packet* pkt, uint8_t type, uint16_t len, const void* val)
 {
    // Reserve packet size
    uint16_t isize = sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint16_t) + len;
-   assert(pkt_reserve(pkt, pkt->size + isize));
+   if(!pkt_reserve(pkt, pkt->size + isize))
+      return 0;
+
    char* dst = pkt->buf + pkt->size;
 
    // Write T-L-V
