@@ -1,3 +1,6 @@
+*   - Shared packet buffers
+    - Packet buffer automatic management
+    - Updated IPC/SHM API
 0.5 - Byte-order conversion
     - Created examples in documentation
     - Created Doxygen API documentation.
