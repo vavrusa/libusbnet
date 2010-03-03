@@ -748,6 +748,7 @@ int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
    int fd = init_hostfd();
 
    // Prepare packet
+   pkt_init(pkt, UsbControlMsg);
    pkt_addint(pkt, dev->fd);
    pkt_addint(pkt, requesttype);
    pkt_addint(pkt, request);
@@ -788,6 +789,7 @@ int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size, int timeou
    int fd = init_hostfd();
 
    // Prepare packet
+   pkt_init(pkt, UsbBulkRead);
    pkt_addint(pkt, dev->fd);
    pkt_addint(pkt, ep);
    pkt_addint(pkt, size);
@@ -822,6 +824,7 @@ int usb_bulk_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, int t
    int fd = init_hostfd();
 
    // Prepare packet
+   pkt_init(pkt, UsbBulkWrite);
    pkt_addint(pkt, dev->fd);
    pkt_addint(pkt, ep);
    pkt_addstr(pkt, size,        bytes);
@@ -852,6 +855,7 @@ int usb_interrupt_write(usb_dev_handle *dev, int ep, usb_buf_t bytes, int size, 
    int fd = init_hostfd();
 
    // Prepare packet
+   pkt_init(pkt, UsbInterruptWrite);
    pkt_addint(pkt, dev->fd);
    pkt_addint(pkt, ep);
    pkt_addstr(pkt, size, bytes);
@@ -879,6 +883,7 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
    int fd = init_hostfd();
 
    // Prepare packet
+   pkt_init(pkt, UsbInterruptRead);
    pkt_addint(pkt, dev->fd);
    pkt_addint(pkt, ep);
    pkt_addint(pkt, size);
