@@ -34,5 +34,5 @@ C usb_interrupt_write -- Write data to an interrupt endpoint
 C usb_interrupt_read -- Read data from a interrupt endpoint
 
 VI. Non Portable
-N usb_get_driver_np -- Get driver name bound to interface
+C usb_get_driver_np -- Get driver name bound to interface
 C usb_detach_kernel_driver_np -- Detach kernel driver from interface
