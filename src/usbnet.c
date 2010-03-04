@@ -879,9 +879,18 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 /** \private
  * Imported from libusb-0.1.12 for forward compatibility with libusb-1.0.
  * This overrides libusb-0.1 as well as libusb-1.0 calls.
+ * @see libusb-0.1.12/descriptors.c:23
  * @see libusb-0.1.12/usb.c:219
  * @see libusb-0.1.12/usb.c:230
  */
+int usb_get_descriptor(usb_dev_handle *udev, unsigned char type,
+        unsigned char index, void *buf, int size)
+{
+  memset(buf, 0, size);
+
+  return usb_control_msg(udev, USB_ENDPOINT_IN, USB_REQ_GET_DESCRIPTOR,
+                        (type << 8) + index, 0, buf, size, 1000);
+}
 int usb_get_string(usb_dev_handle *dev, int index, int langid, char *buf,
         size_t buflen)
 {
