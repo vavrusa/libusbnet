@@ -72,6 +72,7 @@ class UsbService : public ServerSocket
    void usb_interrupt_write(int fd, Packet& in);
 
    /* (6) Non-portable. */
+   void usb_get_kernel_driver(int fd, Packet& in);
    void usb_detach_kernel_driver(int fd, Packet& in);
 
    private:

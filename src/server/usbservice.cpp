@@ -62,6 +62,7 @@ bool UsbService::handle(int fd, Packet& pkt)
       case UsbControlMsg:  usb_control_msg(fd, pkt);  break;
       case UsbClaimInterface: usb_claim_interface(fd, pkt); break;
       case UsbReleaseInterface: usb_release_interface(fd, pkt); break;
+      case UsbGetKernelDriver: usb_get_kernel_driver(fd, pkt); break;
       case UsbDetachKernelDriver: usb_detach_kernel_driver(fd, pkt); break;
       case UsbBulkRead:    usb_bulk_read(fd, pkt);    break;
       case UsbBulkWrite:   usb_bulk_write(fd, pkt);   break;
@@ -446,6 +447,42 @@ void UsbService::usb_release_interface(int fd, Packet &in)
    pkt.send(fd);
 }
 
+void UsbService::usb_get_kernel_driver(int fd, Packet &in)
+{
+   Iterator it(in);
+   int devfd = it.getInt();
+   int index = it.getInt();
+   unsigned namelen = it.getUInt();
+
+   // Create buffer
+   std::string buf;
+   buf.resize(namelen);
+
+   // Find open device
+   int res = -1;
+   std::list<usb_dev_handle*>::iterator i;
+   for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
+      usb_dev_handle* h = *i;
+      if(h->fd == devfd) {
+#if LIBUSB_HAS_GET_DRIVER_NP
+         res = ::usb_get_driver_np(h, index, (char*) buf.data(), namelen);
+#else
+         res = -1;
+#endif
+         break;
+      }
+   }
+
+   buf.at(namelen - 1) = '\0';
+   debug_msg("fd %d, index %d, namelen %u = %d", devfd, index, namelen, res);
+
+   // Return result
+   Packet pkt(UsbGetKernelDriver);
+   pkt.addInt32((int32_t) res);
+   pkt.addString(buf.data());
+   pkt.send(fd);
+}
+
 void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
 {
    Iterator it(in);
@@ -458,7 +495,7 @@ void UsbService::usb_detach_kernel_driver(int fd, Packet &in)
    for(i = mOpenList.begin(); i != mOpenList.end(); ++i) {
       usb_dev_handle* h = *i;
       if(h->fd == devfd) {
-#ifdef LIBUSB_HAS_DETACH_KERNEL_DRIVER_NP
+#if LIBUSB_HAS_DETACH_KERNEL_DRIVER_NP
          res = ::usb_detach_kernel_driver_np(h, index);
 #else
          res = 0;

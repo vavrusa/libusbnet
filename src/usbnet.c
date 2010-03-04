@@ -849,7 +849,53 @@ int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size, int t
 /* libusb(6):
  * Non-portable.
  */
+#if LIBUSB_HAS_GET_DRIVER_NP
 
+/* Imported from libusb-0.1.12/linux.h:38
+ */
+#define USB_MAXDRIVERNAME 255
+struct usb_getdriver {
+        unsigned int interface;
+        char driver[USB_MAXDRIVERNAME + 1];
+};
+
+int usb_get_driver_np(usb_dev_handle *dev, int interface, char *name, unsigned int namelen)
+{
+   // Get remote fd
+   Packet* pkt = pkt_claim();
+   int fd = session_get();
+
+   // Send packet
+   pkt_init(pkt, UsbGetKernelDriver);
+   pkt_addint(pkt,  dev->fd);
+   pkt_addint(pkt,  interface);
+   pkt_adduint(pkt, namelen);
+   pkt_send(pkt, fd);
+
+   // Get response
+   int res = -1;
+   if(pkt_recv(fd, pkt) > 0 && pkt_op(pkt) == UsbGetKernelDriver) {
+      Iterator it;
+      pkt_begin(pkt, &it);
+      res = iter_getint(&it);
+
+      // Error
+      if(res) {
+         error_msg("%s: could not get bound driver", __func__);
+      }
+
+      // Save string
+      strncpy(name, iter_getstr(&it), namelen - 1);
+      name[namelen - 1] = '\0';
+   }
+
+   pkt_release();
+   debug_msg("returned %d (%s)", res, name);
+   return res;
+}
+#endif
+
+#if LIBUSB_HAS_DETACH_KERNEL_DRIVER_NP
 int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 {
    // Get remote fd
@@ -873,8 +919,8 @@ int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
    pkt_release();
    debug_msg("returned %d", res);
    return res;
-
 }
+#endif
 
 /** \private
  * Imported from libusb-0.1.12 for forward compatibility with libusb-1.0.
