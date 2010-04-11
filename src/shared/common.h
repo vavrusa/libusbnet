@@ -26,6 +26,16 @@
 #define SHM_KEY  (0x2a2a2a2a)
 #define SHM_SIZE (512) // At least size of int, SHMMIN may be enforced (!)
 
+/** Log level.
+  */
+enum LogLevel
+{
+    MsgNull  = 0, // No output
+    MsgError = 1, // Print error messages
+    MsgLog   = 2, // Print error and log messages
+    MsgDebug = 4  // Debug output
+};
+
 /* Debugging and symbol loading macros.
  */
 
@@ -44,25 +54,48 @@ static const char* filename(const char* path) {
    return ++p;
 }
 
+/** Return loglevel.
+  */
+int log_level();
+
+/** Set loglevel.
+  * \param flags loglevel bitfield (see enum LogLevel).
+  * \return old value
+  */
+int log_setlevel(int flags);
+
 /** Log message.
   */
 #define log_msg(fmt, args...) \
-printf(fmt, ## args); \
-printf("\n")
+do { \
+if(log_level() & MsgLog) { \
+   printf(fmt, ## args); \
+   printf("\n"); \
+}; \
+} while(0)
+
 
 /** Error message.
   */
 #define error_msg(fmt, args...) \
-fprintf(stderr, fmt, ## args); \
-fprintf(stderr, "\n")
+do { \
+if(log_level() & MsgError) { \
+   fprintf(stderr, fmt, ## args); \
+   fprintf(stderr, "\n"); \
+}; \
+} while(0)
 
 /** Debug message.
   */
 #ifdef DEBUG
 #define debug_msg(fmt, args...) \
-fprintf(stderr, "%s: ", __func__); \
-fprintf(stderr, fmt, ## args); \
-fprintf(stderr, "\n")
+do { \
+if(log_level() & MsgDebug) { \
+   fprintf(stderr, "%s: ", __func__); \
+   fprintf(stderr, fmt, ## args); \
+   fprintf(stderr, "\n"); \
+}; \
+} while(0)
 
 #else
 #define debug_msg(fmt, args...)
