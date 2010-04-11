@@ -28,7 +28,7 @@ endif(${LIBUSB_CONST_BUFFERS})
 
 # Documentation
 set(DOCUMENTATION_DIR "${CMAKE_SOURCE_DIR}/doc")
-include(${CMAKE_MODULE_PATH}/Doxygen.cmake)
+include(${CMAKE_MODULE_PATH}/Documentation.cmake)
 
 # Set library prefixes
 SET(LIBDIR "lib${LIB_SUFFIX}")
