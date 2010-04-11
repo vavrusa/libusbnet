@@ -44,7 +44,8 @@ int main(int argc, char* argv[])
       .add('a', "auth",     "Authentication token user@host[:port]")
       .add('l', "library",  "Preloaded library", "libusbnet.so")
       .add('t', "timeout",  "Connection timeout (ms).", "1000")
-      .add('?', "help");
+      .add('q', "quiet",    "Quiet output", "", false)
+      .add('?', "help",     "Print help",   "", false);
 
    cmd.setUsage("Usage: usbnet [options] <executable>");
 
@@ -65,6 +66,7 @@ int main(int argc, char* argv[])
       case 'a': auth    = m.second; break;
       case 'l': lib     = m.second; break;
       case 't': timeout = atoi(m.second.c_str()); break;
+      case 'q': log_setlevel(MsgError); break;
       case '?':
          cmd.printHelp();
          return EXIT_SUCCESS;

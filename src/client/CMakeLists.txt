@@ -7,6 +7,7 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}
 set(sources   usbnet.cpp
               clientsocket.cpp
               ${SHARED_DIR}/cmdflags.cpp
+              ${SHARED_DIR}/common.c
               )
 set(headers   clientsocket.hpp
               )

@@ -48,7 +48,8 @@ int main(int argc, char* argv[])
    // Parse command line arguments
    CmdFlags cmd(argc, argv);
    cmd.add('l', "local", "Bind to localhost only.")
-      .add('?', "help");
+      .add('q', "quiet", "Quiet output", "", false)
+      .add('?', "help",  "Print help",   "", false);
 
    cmd.setUsage("Usage: usbexportd [options]");
 
@@ -58,11 +59,12 @@ int main(int argc, char* argv[])
 
       // Evaluate
       switch(m.first) {
+      case 'q':
+         log_setlevel(MsgError);
+         break;
       case 'l':
-         log_msg("Server: binding to localhost only");
          host = ServerSocket::Local;
          break;
-
       case '?':
          cmd.printHelp();
          return EXIT_SUCCESS;
@@ -75,6 +77,10 @@ int main(int argc, char* argv[])
       // Next option
       m = cmd.getopt();
    }
+
+   // Localhost check
+   if(host == ServerSocket::Local)
+      log_msg("Server: binding to localhost only");
 
    // Create server socket
    UsbService service;
