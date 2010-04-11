@@ -26,14 +26,15 @@
 class Option
 {
    public:
-   Option(char _c, const char* _n, const char* _d = "", const char* _i = "")
-      : code(_c), name(_n), desc(_d), implicit(_i) {
+   Option(char _c, const char* _n, const char* _d = "", const char* _i = "", bool _v = true)
+      : code(_c), name(_n), desc(_d), implicit(_i), has_value(_v) {
    }
 
    int         code;
    const char* name;
    const char* desc;
    const char* implicit;
+   bool        has_value;
 };
 
 /** Simple class for portable C++ getopt().
@@ -52,8 +53,8 @@ class CmdFlags
    }
 
    /** Add option. */
-   CmdFlags& add(char _c, const char* _n, const char* _d = "", const char* _i = "") {
-      mOptions.push_back(Option(_c, _n, _d, _i));
+   CmdFlags& add(char _c, const char* _n, const char* _d = "", const char* _i = "", bool _v = true) {
+      mOptions.push_back(Option(_c, _n, _d, _i, _v));
       return *this;
    }
 

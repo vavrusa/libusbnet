@@ -36,6 +36,7 @@ CmdFlags::Match CmdFlags::getopt() {
       return m;
 
    // Get current arg
+   bool has_value = true;
    const char* pin = mArgs[mPos++];
    if(strlen(pin) > 1) {
       std::vector<Option>::iterator it;
@@ -45,6 +46,7 @@ CmdFlags::Match CmdFlags::getopt() {
          char code[3] = { '-', it->code, 0 };
          if(strncmp(pin, code, 2) == 0 || (strcmp(pin + 2, it->name) == 0)) {
             m.first = it->code;
+            has_value = it->has_value;
             break;
          }
       }
@@ -59,7 +61,7 @@ CmdFlags::Match CmdFlags::getopt() {
       }
 
       // Add value to valid parameter
-      if(mPos < mArgs.size()) {
+      if(mPos < mArgs.size() && has_value) {
          m.second = mArgs[mPos];
          if(m.second[0] == '-') {
             error_msg("getopt(): '%s', missing value", pin);
