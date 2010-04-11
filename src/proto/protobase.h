@@ -110,6 +110,7 @@ int ipc_get_remote();
 
 /** Save host socket descriptor.
   * Save socket descriptor to SHM.
+  * Store host loglevel.
   */
 int ipc_set_remote(int fd);
 

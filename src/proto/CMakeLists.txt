@@ -1,6 +1,7 @@
 # Includes
 include_directories( ${CMAKE_CURRENT_BINARY_DIR}
                      ${CMAKE_CURRENT_SOURCE_DIR}
+                     ${SHARED_DIR}
                      )
 
 # Find pthreads
@@ -9,11 +10,13 @@ find_package(Threads REQUIRED)
 # Targets
 set(sources_c protocol.c
               protobase.c
+              ${SHARED_DIR}/common.c
               )
 
 set(sources   protocol.cpp
               socket.cpp
               protobase.c
+              ${SHARED_DIR}/common.c
               )
 
 set(headers_c protocol.h

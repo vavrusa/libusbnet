@@ -186,7 +186,6 @@ static void* ipc_get_addr() {
    if((shm_id = shmget(SHM_KEY, SHM_SIZE, 0666)) != -1) {
 
       // Attach segment and read fd
-      printf("IPC: accessing segment %d\n", shm_id);
       void* shm_addr = NULL;
       if ((shm_addr = shmat(shm_id, NULL, 0)) != (void *) -1)
          return shm_addr;
@@ -208,12 +207,15 @@ int ipc_get_remote()
       // Read fd
       fd = *((int*) shm_addr);
 
+      // Read loglevel
+      log_setlevel(*((int*) shm_addr + 1));
+
       // Detach
       shmdt(shm_addr);
    }
 
    // Check resulting fd
-   printf("IPC: remote fd is %d\n", fd);
+   log_msg("IPC: remote fd is %d\n", fd);
 
    // Check peer name - keep-alive
    struct sockaddr_in addr;
@@ -230,9 +232,12 @@ int ipc_set_remote(int fd)
    void* shm_addr = ipc_get_addr();
    if(shm_addr != NULL) {
 
-      // Read fd
+      // Store remote fd
       *((int*) shm_addr) = fd;
       log_msg("IPC: stored remote socket descriptor %d", fd);
+
+      // Store loglevel
+      *((int*) shm_addr + 1) = log_level();
 
       // Detach
       shmdt(shm_addr);

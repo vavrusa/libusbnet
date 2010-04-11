@@ -101,7 +101,7 @@ int session_get() {
    }
 
    if(__remote_fd == -1) {
-      fprintf(stderr, "IPC: unable to access remote fd\n");
+      error_msg("IPC: unable to access remote fd");
       exit(1);
    }
 
