@@ -28,7 +28,12 @@ set(headers   protocol.hpp
               )
 
 add_library(urpc    SHARED ${sources_c} ${headers_c})
+set_target_properties(urpc PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(urpc PROPERTIES VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.0 SOVERSION 1)
+
 add_library(urpc_pp SHARED ${sources} ${headers})
+set_target_properties(urpc_pp PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(urpc_pp PROPERTIES VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.0 SOVERSION 1)
 
 # Install
 install( TARGETS urpc urpc_pp

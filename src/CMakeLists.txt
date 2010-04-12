@@ -21,6 +21,8 @@ add_subdirectory(server)
 
 # Create library
 add_library(usbnet SHARED ${sources} ${headers})
+set_target_properties(usbnet PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(usbnet PROPERTIES VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.0 SOVERSION 1)
 
 # Dependencies
 target_link_libraries(usbnet ${LIBUSB_LIBRARIES} urpc)
