@@ -28,6 +28,7 @@
 #include <sstream>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 using namespace std;
 
