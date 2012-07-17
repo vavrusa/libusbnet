@@ -34,6 +34,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 /** Portable sleep() macro.
   * \param ms Sleep time in miliseconds.
