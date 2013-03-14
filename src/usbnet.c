@@ -36,9 +36,11 @@ typedef const char *usb_buf_t;
 typedef char *usb_buf_t;
 #endif
 
+#ifdef MISSING_USB_DESTROY_CONFIGURATION 
 /** Imported from libusb-0.1/descriptors.c
  */
 static void usb_destroy_configuration(struct usb_device *dev);
+#endif
 
 //! Remote socket filedescriptor
 static int __remote_fd = -1;
@@ -993,6 +995,7 @@ int usb_get_string_simple(usb_dev_handle *dev, int index, char *buf, size_t bufl
   return di;
 }
 
+#ifdef MISSING_USB_DESTROY_CONFIGURATION 
 /** \private
   *  Imported from libusb-0.1.12 private interface as helper function.
   */
@@ -1039,4 +1042,5 @@ static void usb_destroy_configuration(struct usb_device *dev)
 
   free(dev->config);
 }
+#endif
 /** @} */
